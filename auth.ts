@@ -22,12 +22,12 @@ import Google from "next-auth/providers/google"
 // import Netlify from "next-auth/providers/netlify"
 // import Okta from "next-auth/providers/okta"
 // import Passage from "next-auth/providers/passage"
-import Passkey from "next-auth/providers/passkey"
+// import Passkey from "next-auth/providers/passkey"
 // import Pinterest from "next-auth/providers/pinterest"
 import Reddit from "next-auth/providers/reddit"
 import Slack from "next-auth/providers/slack"
 // import Salesforce from "next-auth/providers/salesforce"
-import Spotify from "next-auth/providers/spotify"
+// import Spotify from "next-auth/providers/spotify"
 // import Twitch from "next-auth/providers/twitch"
 import Twitter from "next-auth/providers/twitter"
 // // import Vipps from "next-auth/providers/vipps"
@@ -77,21 +77,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     // MicrosoftEntraId,
     // Netlify,
     // Okta,
-    Passkey({
-      formFields: {
-        email: {
-          label: "Username",
-          required: true,
-          autocomplete: "username webauthn",
-        },
-      },
-    }),
+    // Passkey({
+    //   formFields: {
+    //     email: {
+    //       label: "Username",
+    //       required: true,
+    //       autocomplete: "username webauthn",
+    //     },
+    //   },
+    // }),
     // Passage,
     // Pinterest,
     Reddit,
     // Salesforce,
     Slack,
-    Spotify,
+    // Spotify,
     // Twitch,
     Twitter,
     // Vipps({
@@ -121,7 +121,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return session
     },
   },
-  experimental: { enableWebAuthn: true },
+  // experimental: { enableWebAuthn: true },
 })
 
 declare module "next-auth" {
