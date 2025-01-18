@@ -1,3 +1,19 @@
+
+# Business Coupon System
+
++ This is a business coupon system that allows businesses to issue and player to redeem coupons.
++ build based on [NextAuth.js](https://next-auth.js.org/)
+
+## How to start
+
+1. clone this repo
+2. run `pnpm install`
+3. copy .env.example to .env
+4. add your own env variables:
+   1. AUTH_GOOGLE_ID, AUTH_GOOGLE_SECRET, from https://console.cloud.google.com/auth/clients/ 
+   2. AUTH_SECRET, secret - you can generate one using `openssl rand -base64 32`
+5. run `pnpm run dev`
+
 > The example repository is maintained from a [monorepo](https://github.com/nextauthjs/next-auth/tree/main/apps/examples/nextjs). Pull Requests should be opened against [`nextauthjs/next-auth`](https://github.com/nextauthjs/next-auth).
 
 <p align="center">
