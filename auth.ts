@@ -70,7 +70,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     // Facebook,
     GitHub,
     // GitLab,
-    Google,
+    Google({
+      clientId: process.env.AUTH_GOOGLE_ID,
+      clientSecret: process.env.AUTH_GOOGLE_SECRET,
+      authorization: {
+        params: {
+          prompt: "consent",
+          access_type: "offline",
+          response_type: "code"
+        }
+      }
+    }),
     // Hubspot,
     // Keycloak({ name: "Keycloak (bob/bob)" }),
     // LinkedIn,
