@@ -100,15 +100,15 @@ export default function NewCouponForm({ categories, merchant, defaultDates, onSu
   const [selectedType, setSelectedType] = useState<keyof typeof PROMOTION_TYPES | ''>('')
   const [settings, setSettings] = useState<typeof PROMOTION_TYPES[keyof typeof PROMOTION_TYPES] | Record<string, never>>({})
   const [quantity, setQuantity] = useState<number>(1)
-  const [pointsPrice, setPointsPrice] = useState<number>(0)
+  const [publishPrice, setPublishPrice] = useState<number>(0)
 
-  // Calculate points price when type changes
+  // Calculate publish price when type changes
   useEffect(() => {
     if (selectedType) {
       const basePoints = PROMOTION_TYPES[selectedType].basePoints
-      setPointsPrice(basePoints)
+      setPublishPrice(basePoints)
     } else {
-      setPointsPrice(0)
+      setPublishPrice(0)
     }
   }, [selectedType])
 
@@ -203,12 +203,12 @@ export default function NewCouponForm({ categories, merchant, defaultDates, onSu
               id="publishPrice" 
               name="publishPrice" 
               type="number" 
-              value={pointsPrice}
+              value={publishPrice}
               readOnly
               className="bg-muted"
             />
             <p className="text-sm text-muted-foreground">
-              Total points needed to publish: {pointsPrice * quantity} (Your balance: {merchant?.pointsBalance ?? 0} points)
+              Total points needed to publish: {publishPrice * quantity} (Your balance: {merchant?.pointsBalance ?? 0} points)
             </p>
           </div>
 
@@ -236,7 +236,7 @@ export default function NewCouponForm({ categories, merchant, defaultDates, onSu
         </CardContent>
         <CardFooter>
           <div className="flex gap-2">
-            <Button type="submit" disabled={pointsPrice * quantity > (merchant?.pointsBalance ?? 0)}>
+            <Button type="submit" disabled={publishPrice * quantity > (merchant?.pointsBalance ?? 0)}>
               Issue Coupon
             </Button>
             <Button type="button" variant="outline" onClick={() => window.history.back()}>

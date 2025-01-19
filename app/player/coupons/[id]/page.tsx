@@ -3,35 +3,37 @@ import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { notFound } from "next/navigation"
 
-export default async function CouponDetailsPage({
-  params
+export default async function CouponDetailPage({
+  params: { id }
 }: {
   params: { id: string }
 }) {
   const session = await auth()
   
   if (!session?.user?.email) {
-    redirect("/auth/signin?callbackUrl=/player/coupons/" + params.id)
+    redirect(`/auth/signin?callbackUrl=/player/coupons/${id}`)
   }
 
-  // Get coupon details with merchant info and category
+  // Get user with player profile
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+    include: { playerProfile: true }
+  })
+
+  if (!user) {
+    redirect("/")
+  }
+
+  // Get coupon template with merchant info
   const coupon = await prisma.couponTemplate.findUnique({
-    where: {
-      id: params.id,
-      status: "active",
-      startDate: { lte: new Date() },
-      endDate: { gt: new Date() },
-      remainingQuantity: { gt: 0 }
-    },
+    where: { id },
     include: {
       merchant: {
         select: {
           businessName: true,
           description: true,
-          images: true,
-          address: true
+          images: true
         }
       },
       category: true
@@ -39,102 +41,93 @@ export default async function CouponDetailsPage({
   })
 
   if (!coupon) {
-    notFound()
+    redirect("/player/browse")
   }
 
-  // Get promotion type details
-  const promotionDetails = {
-    type: coupon.promotionType,
-    settings: coupon.settings,
-    discountType: coupon.discountType,
-    discountValue: coupon.discountValue
-  }
+  // Check if user has already redeemed this coupon
+  const existingCoupon = await prisma.issuedCoupon.findFirst({
+    where: {
+      templateId: id,
+      userId: user.id
+    }
+  })
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <div className="mb-6">
-        <Button asChild variant="outline">
-          <Link href="/player/browse">← Back to Browse</Link>
-        </Button>
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <Link 
+            href="/player/browse" 
+            className="mb-2 inline-block text-sm text-muted-foreground hover:text-foreground"
+          >
+            ← Back to Browse
+          </Link>
+          <h1 className="text-3xl font-bold">{coupon.name}</h1>
+        </div>
+        {existingCoupon ? (
+          <Button disabled>Already Redeemed</Button>
+        ) : (
+          <Button asChild>
+            <Link href={`/player/coupons/redeem/${coupon.id}`}>Redeem Now</Link>
+          </Button>
+        )}
       </div>
 
-      <div className="rounded-lg border">
-        {/* Merchant Info Section */}
-        <div className="border-b p-6">
-          <div className="flex items-start gap-6">
-            <img
-              src={coupon.merchant.images[0]}
-              alt={coupon.merchant.businessName}
-              className="h-32 w-32 rounded-lg object-cover"
-            />
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <div className="rounded-lg border p-6">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold">Description</h2>
+              <p className="text-muted-foreground">{coupon.description}</p>
+            </div>
+
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold">Promotion Details</h2>
+              <div className="mt-2 grid gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">Type:</span>
+                  <span>{coupon.promotionType}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">Discount:</span>
+                  <span>
+                    {coupon.discountType === 'percentage' ? 
+                      `${coupon.discountValue}% off` : 
+                      `¥${coupon.discountValue} off`}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">Category:</span>
+                  <span>{coupon.category.name}</span>
+                </div>
+              </div>
+            </div>
+
             <div>
-              <h1 className="text-2xl font-bold">{coupon.merchant.businessName}</h1>
-              <p className="mt-2 text-muted-foreground">{coupon.merchant.description}</p>
-              <p className="mt-2 text-sm text-muted-foreground">{coupon.merchant.address}</p>
+              <h2 className="text-lg font-semibold">Terms & Conditions</h2>
+              <div className="mt-2 space-y-2 text-sm text-muted-foreground">
+                <p>• Valid from {new Date(coupon.startDate).toLocaleString()} to {new Date(coupon.endDate).toLocaleString()}</p>
+                <p>• Limited quantity: {coupon.remainingQuantity} remaining out of {coupon.totalQuantity}</p>
+                <p>• Points required: {coupon.publishPrice} points</p>
+                <p>• One redemption per user</p>
+                <p>• Cannot be combined with other promotions</p>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Coupon Details Section */}
-        <div className="p-6">
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold">{coupon.name}</h2>
-            <p className="mt-2 text-muted-foreground">{coupon.description}</p>
-          </div>
-
-          <div className="mb-6 grid gap-4 sm:grid-cols-2">
-            <div>
-              <div className="text-sm text-muted-foreground">Category</div>
-              <div>{coupon.category.name}</div>
+        <div>
+          <div className="rounded-lg border p-6">
+            <h2 className="text-lg font-semibold">Merchant</h2>
+            <div className="mt-4">
+              <img
+                src={coupon.merchant.images[0]}
+                alt={coupon.merchant.businessName}
+                className="mb-4 h-32 w-full rounded-md object-cover"
+              />
+              <h3 className="font-semibold">{coupon.merchant.businessName}</h3>
+              <p className="text-sm text-muted-foreground">{coupon.merchant.description}</p>
             </div>
-            <div>
-              <div className="text-sm text-muted-foreground">Points Required</div>
-              <div>{coupon.pointsPrice} points</div>
-            </div>
-            <div>
-              <div className="text-sm text-muted-foreground">Available</div>
-              <div>{coupon.remainingQuantity} / {coupon.totalQuantity}</div>
-            </div>
-            <div>
-              <div className="text-sm text-muted-foreground">Valid Period</div>
-              <div>
-                {new Date(coupon.startDate).toLocaleDateString()} - {new Date(coupon.endDate).toLocaleDateString()}
-              </div>
-            </div>
-          </div>
-
-          {/* Promotion Details Section */}
-          <div className="mb-6">
-            <h3 className="font-semibold">Promotion Details</h3>
-            <div className="mt-2 rounded-md bg-muted p-4">
-              <div className="grid gap-2">
-                <div className="text-sm">
-                  <span className="text-muted-foreground">Type: </span>
-                  {promotionDetails.type}
-                </div>
-                <div className="text-sm">
-                  <span className="text-muted-foreground">Discount: </span>
-                  {promotionDetails.discountType === 'percentage' ? 
-                    `${promotionDetails.discountValue}% off` : 
-                    `¥${promotionDetails.discountValue} off`}
-                </div>
-                {Object.entries(promotionDetails.settings).map(([key, value]) => (
-                  <div key={key} className="text-sm">
-                    <span className="text-muted-foreground">{key}: </span>
-                    {String(value)}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Action Button */}
-          <div className="flex justify-end">
-            <Button asChild>
-              <Link href={`/player/coupons/redeem/${coupon.id}`}>
-                Redeem for {coupon.pointsPrice} Points
-              </Link>
-            </Button>
           </div>
         </div>
       </div>

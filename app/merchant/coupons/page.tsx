@@ -38,9 +38,14 @@ export default async function MerchantCouponsPage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">My Coupons</h1>
-        <Button asChild>
-          <Link href="/merchant/coupons/new">Issue New Coupon</Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild>
+            <Link href="/merchant/coupons/new">Issue New Coupon</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/merchant">Dashboard</Link>
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4">
@@ -70,8 +75,8 @@ export default async function MerchantCouponsPage() {
                 <div>{coupon.category.name}</div>
               </div>
               <div>
-                <div className="text-sm text-muted-foreground">Points Price</div>
-                <div>{coupon.pointsPrice} points</div>
+                <div className="text-sm text-muted-foreground">Publish Price</div>
+                <div>{coupon.publishPrice} points</div>
               </div>
               <div>
                 <div className="text-sm text-muted-foreground">Quantity</div>
@@ -91,6 +96,29 @@ export default async function MerchantCouponsPage() {
               <div>
                 <div className="text-sm text-muted-foreground">End Date</div>
                 <div>{new Date(coupon.endDate).toLocaleString()}</div>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <div className="text-sm text-muted-foreground">Status</div>
+              <div className="mt-1">
+                {coupon.status === 'active' ? (
+                  <span className="rounded-full bg-green-100 px-2 py-1 text-green-700">
+                    Active (Available for redemption)
+                  </span>
+                ) : coupon.status === 'expired' ? (
+                  <span className="rounded-full bg-yellow-100 px-2 py-1 text-yellow-700">
+                    Expired (Past end date)
+                  </span>
+                ) : coupon.status === 'soldout' ? (
+                  <span className="rounded-full bg-orange-100 px-2 py-1 text-orange-700">
+                    Sold Out (No remaining quantity)
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-gray-100 px-2 py-1 text-gray-700">
+                    {coupon.status}
+                  </span>
+                )}
               </div>
             </div>
 

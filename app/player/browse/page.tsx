@@ -15,10 +15,11 @@ export default async function BrowseCouponsPage() {
   // Get all active coupon templates with merchant info
   const coupons = await prisma.couponTemplate.findMany({
     where: {
-      status: 'active',
-      startDate: { lte: new Date() },
-      endDate: { gt: new Date() },
-      remainingQuantity: { gt: 0 }
+      status: 'active'
+      // Temporarily remove date and quantity filters for testing
+      // startDate: { lte: new Date() },
+      // endDate: { gt: new Date() },
+      // remainingQuantity: { gt: 0 }
     },
     include: {
       merchant: {
@@ -27,7 +28,8 @@ export default async function BrowseCouponsPage() {
           description: true,
           images: true
         }
-      }
+      },
+      category: true
     },
     orderBy: {
       createdAt: 'desc'
@@ -36,12 +38,21 @@ export default async function BrowseCouponsPage() {
 
   // For debugging
   console.log('Found coupons:', coupons.length)
-  console.log('Current time:', new Date())
-  console.log('Query conditions:', {
-    status: 'active',
-    startDateBefore: new Date(),
-    endDateAfter: new Date()
-  })
+  console.log('Current time:', new Date().toISOString())
+  
+  // Log each coupon for debugging
+  for (const coupon of coupons) {
+    console.log('Coupon:', {
+      id: coupon.id,
+      name: coupon.name,
+      merchant: coupon.merchant.businessName,
+      startDate: coupon.startDate.toISOString(),
+      endDate: coupon.endDate.toISOString(),
+      remainingQuantity: coupon.remainingQuantity,
+      status: coupon.status,
+      publishPrice: coupon.publishPrice
+    })
+  }
 
   // Group coupons by merchant
   const couponsByMerchant = coupons.reduce((acc, coupon) => {
