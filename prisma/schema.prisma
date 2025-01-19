@@ -105,25 +105,25 @@ model CouponCategory {
 }
 
 model CouponTemplate {
-  id                String           @id @default(cuid())
-  merchantId        String          @map("merchant_id")
-  merchant          MerchantProfile @relation(fields: [merchantId], references: [id])
-  categoryId        String          @map("category_id")
-  category          CouponCategory  @relation(fields: [categoryId], references: [id])
-  name              String
-  description       String?
-  promotionType     String          @map("promotion_type")
-  settings          Json            @map("settings")
-  discountType      String          @map("discount_type")
-  discountValue     Decimal         @map("discount_value")
-  pointsPrice       Int             @map("points_price")
-  totalQuantity     Int             @map("total_quantity")
-  remainingQuantity Int             @map("remaining_quantity")
-  startDate         DateTime        @map("start_date")
-  endDate           DateTime        @map("end_date")
-  status            String          @default("active")
-  createdAt         DateTime        @default(now()) @map("created_at")
-  issuedCoupons     IssuedCoupon[]
+  id               String          @id @default(cuid())
+  merchantId       String          @map("merchant_id")
+  categoryId       String          @map("category_id")
+  name            String
+  description     String?
+  promotionType   String          @map("promotion_type")
+  settings        Json
+  discountType    String          @map("discount_type")
+  discountValue   Decimal         @map("discount_value")
+  publishPrice    Int             @map("publish_price")
+  totalQuantity   Int             @map("total_quantity")
+  remainingQuantity Int           @map("remaining_quantity")
+  startDate       DateTime        @map("start_date")
+  endDate         DateTime        @map("end_date")
+  status          String          @default("active")
+  createdAt       DateTime        @default(now()) @map("created_at")
+  merchant        MerchantProfile @relation(fields: [merchantId], references: [id])
+  category        CouponCategory  @relation(fields: [categoryId], references: [id])
+  issuedCoupons   IssuedCoupon[]
 
   @@map("coupon_templates")
 }

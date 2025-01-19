@@ -89,24 +89,28 @@ interface NewCouponFormProps {
     id: string
     pointsBalance: number
   }
+  defaultDates: {
+    startDate: string
+    endDate: string
+  }
   onSubmit: (formData: FormData) => Promise<void>
 }
 
-export default function NewCouponForm({ categories, merchant, onSubmit }: NewCouponFormProps) {
+export default function NewCouponForm({ categories, merchant, defaultDates, onSubmit }: NewCouponFormProps) {
   const [selectedType, setSelectedType] = useState<keyof typeof PROMOTION_TYPES | ''>('')
   const [settings, setSettings] = useState<typeof PROMOTION_TYPES[keyof typeof PROMOTION_TYPES] | Record<string, never>>({})
   const [quantity, setQuantity] = useState<number>(1)
-  const [totalPoints, setTotalPoints] = useState<number>(0)
+  const [pointsPrice, setPointsPrice] = useState<number>(0)
 
-  // Calculate total points when type or quantity changes
+  // Calculate points price when type changes
   useEffect(() => {
-    if (selectedType && quantity > 0) {
+    if (selectedType) {
       const basePoints = PROMOTION_TYPES[selectedType].basePoints
-      setTotalPoints(basePoints * quantity)
+      setPointsPrice(basePoints)
     } else {
-      setTotalPoints(0)
+      setPointsPrice(0)
     }
-  }, [selectedType, quantity])
+  }, [selectedType])
 
   const handleTypeChange = (type: string) => {
     setSelectedType(type as keyof typeof PROMOTION_TYPES)
@@ -194,17 +198,17 @@ export default function NewCouponForm({ categories, merchant, onSubmit }: NewCou
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="pointsPrice">Points Required</Label>
+            <Label htmlFor="publishPrice">Publish Price</Label>
             <Input 
-              id="pointsPrice" 
-              name="pointsPrice" 
+              id="publishPrice" 
+              name="publishPrice" 
               type="number" 
-              value={totalPoints}
+              value={pointsPrice}
               readOnly
               className="bg-muted"
             />
             <p className="text-sm text-muted-foreground">
-              Your balance: {merchant?.pointsBalance ?? 0} points
+              Total points needed to publish: {pointsPrice * quantity} (Your balance: {merchant?.pointsBalance ?? 0} points)
             </p>
           </div>
 
@@ -232,7 +236,7 @@ export default function NewCouponForm({ categories, merchant, onSubmit }: NewCou
         </CardContent>
         <CardFooter>
           <div className="flex gap-2">
-            <Button type="submit" disabled={totalPoints > (merchant?.pointsBalance ?? 0)}>
+            <Button type="submit" disabled={pointsPrice * quantity > (merchant?.pointsBalance ?? 0)}>
               Issue Coupon
             </Button>
             <Button type="button" variant="outline" onClick={() => window.history.back()}>

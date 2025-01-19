@@ -1,45 +1,124 @@
 import { auth } from "auth"
-import { Button } from "@/components/ui/button"
+import { redirect } from "next/navigation"
+import { prisma } from "@/lib/prisma"
 import Link from "next/link"
 
-export default async function Home() {
+export default async function HomePage() {
   const session = await auth()
-  const email = session?.user?.email || ''
   
-  // 邮箱隐私处理：保留开头和结尾，中间用 * 代替
-  const maskedEmail = email.replace(/(?<=.{3}).(?=.*@)/g, '*')
+  // If not signed in, show welcome page
+  if (!session?.user?.email) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div>
+          <h1 className="text-3xl font-bold">Welcome to Arcadia</h1>
+          <p className="text-muted-foreground">Get New Customers with Smart Promotions</p>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="rounded-lg border p-6">
+            <h2 className="text-xl font-semibold">For Merchants</h2>
+            <p className="mt-2 text-muted-foreground">
+              Attract new customers with smart promotions and loyalty programs.
+            </p>
+            <Link 
+              href="/auth/signin?callbackUrl=/merchant/new"
+              className="mt-4 inline-block rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+            >
+              Get Started
+            </Link>
+          </div>
+          <div className="rounded-lg border p-6">
+            <h2 className="text-xl font-semibold">For Players</h2>
+            <p className="mt-2 text-muted-foreground">
+              Discover great deals and earn rewards while shopping.
+            </p>
+            <Link 
+              href="/auth/signin?callbackUrl=/player/new"
+              className="mt-4 inline-block rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+            >
+              Get Started
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Get user with profiles
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+    include: {
+      merchantProfile: true,
+      playerProfile: true
+    }
+  })
+
+  if (!user) {
+    redirect("/auth/signin")
+  }
+
+  const username = session.user.name || user.email.split('@')[0]
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col items-center justify-center min-h-[200px] rounded-lg border bg-card text-card-foreground shadow-sm">
-        <h1 className="text-3xl font-bold text-center mb-2">Get New Customer in Web3</h1>
-        <p className="text-xl text-muted-foreground">Arcadia - Smart Business</p>
-        {session?.user ? (
-          <p className="mt-4 text-sm text-muted-foreground">Welcome, {maskedEmail}</p>
-        ) : null}
+      <div>
+        <h1 className="text-3xl font-bold">Welcome, {username}</h1>
+        <p className="text-muted-foreground">Get started with Arcadia - Your Gateway to Smart Shopping</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Link href="/merchant" className="group relative">
-          <div className="rounded-lg border bg-card text-card-foreground shadow-sm transition-colors hover:bg-accent">
-            <div className="p-6">
-              <h3 className="text-2xl font-semibold">Merchant</h3>
-              <p className="text-sm text-muted-foreground">
-                Register as a merchant to issue coupons and attract customers.
+      <div className="grid gap-4 sm:grid-cols-2">
+        {/* Merchant Section */}
+        <Link 
+          href={user.merchantProfile ? "/merchant" : "/merchant/new"}
+          className="rounded-lg border p-6 transition-colors hover:bg-muted/50"
+        >
+          <h2 className="text-xl font-semibold">Merchant</h2>
+          {user.merchantProfile ? (
+            <>
+              <p className="mt-2 text-muted-foreground">
+                Business: {user.merchantProfile.businessName}
               </p>
-            </div>
-          </div>
+              <p className="text-sm text-muted-foreground">
+                Points Balance: {user.merchantProfile.pointsBalance} points
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="mt-2 text-muted-foreground">
+                Get New Customers with Smart Promotions
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Register as a merchant to start issuing coupons and attracting customers.
+              </p>
+            </>
+          )}
         </Link>
 
-        <Link href="/player" className="group relative">
-          <div className="rounded-lg border bg-card text-card-foreground shadow-sm transition-colors hover:bg-accent">
-            <div className="p-6">
-              <h3 className="text-2xl font-semibold">Player</h3>
-              <p className="text-sm text-muted-foreground">
-                Browse and redeem coupons from various merchants.
+        {/* Player Section */}
+        <Link 
+          href={user.playerProfile ? "/player" : "/player/new"}
+          className="rounded-lg border p-6 transition-colors hover:bg-muted/50"
+        >
+          <h2 className="text-xl font-semibold">Player</h2>
+          {user.playerProfile ? (
+            <>
+              <p className="mt-2 text-muted-foreground">
+                Points Balance: {user.playerProfile.pointsBalance} points
               </p>
-            </div>
-          </div>
+              <p className="text-sm text-muted-foreground">
+                Coupons: {user.playerProfile.issuedCoupons?.length || 0}
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="mt-2 text-muted-foreground">
+                Smart Shopping Starts Here
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Register as a player to browse and redeem coupons using points.
+              </p>
+            </>
+          )}
         </Link>
       </div>
     </div>

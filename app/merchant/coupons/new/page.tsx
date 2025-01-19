@@ -57,7 +57,7 @@ export default async function NewCouponPage() {
     const type = formData.get("type") as string
     const settings = JSON.parse(formData.get("settings") as string)
     const totalQuantity = Number.parseInt(formData.get("totalQuantity") as string, 10)
-    const pointsPrice = Number.parseInt(formData.get("pointsPrice") as string, 10)
+    const publishPrice = Number.parseInt(formData.get("publishPrice") as string, 10)
     
     // Get start and end dates from form, fallback to default dates if not provided
     const { startDate: defaultStart, endDate: defaultEnd } = getDefaultDates()
@@ -66,7 +66,7 @@ export default async function NewCouponPage() {
 
     // Validate required fields
     if (!name || !description || !categoryId || !type || !settings || 
-        !totalQuantity || !pointsPrice || !startDate || !endDate) {
+        !totalQuantity || !publishPrice || !startDate || !endDate) {
       throw new Error("Please fill in all required fields")
     }
 
@@ -74,8 +74,8 @@ export default async function NewCouponPage() {
     if (totalQuantity <= 0) {
       throw new Error("Please enter a valid quantity (must be greater than 0)")
     }
-    if (pointsPrice <= 0) {
-      throw new Error("Please enter a valid points price (must be greater than 0)")
+    if (publishPrice <= 0) {
+      throw new Error("Please enter a valid publish price (must be greater than 0)")
     }
 
     // Validate dates with friendly messages
@@ -87,9 +87,8 @@ export default async function NewCouponPage() {
       throw new Error(`End date (${formatDate(endDate)}) must be after start date (${formatDate(startDate)})`)
     }
 
-    // Calculate total points needed for all coupons
-    // Points needed = points price per coupon × total quantity
-    const totalPointsNeeded = pointsPrice * totalQuantity
+    // Calculate total points needed
+    const totalPointsNeeded = publishPrice * totalQuantity
 
     // Check if merchant has enough points balance
     if (user.merchantProfile.pointsBalance < totalPointsNeeded) {
@@ -122,11 +121,11 @@ export default async function NewCouponPage() {
           categoryId,
           name,
           description,
-          promotionType: type, // Use promotionType as defined in schema
+          promotionType: type,
           settings,
           discountType,
           discountValue: new Prisma.Decimal(discountValue),
-          pointsPrice,
+          publishPrice,
           totalQuantity,
           remainingQuantity: totalQuantity,
           startDate,

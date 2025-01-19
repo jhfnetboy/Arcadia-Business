@@ -15,7 +15,7 @@ export default async function BrowseCouponsPage() {
   // Get all active coupon templates with merchant info
   const coupons = await prisma.couponTemplate.findMany({
     where: {
-      status: "active",
+      status: 'active',
       startDate: { lte: new Date() },
       endDate: { gt: new Date() },
       remainingQuantity: { gt: 0 }
@@ -32,6 +32,15 @@ export default async function BrowseCouponsPage() {
     orderBy: {
       createdAt: 'desc'
     }
+  })
+
+  // For debugging
+  console.log('Found coupons:', coupons.length)
+  console.log('Current time:', new Date())
+  console.log('Query conditions:', {
+    status: 'active',
+    startDateBefore: new Date(),
+    endDateAfter: new Date()
   })
 
   // Group coupons by merchant
@@ -75,18 +84,32 @@ export default async function BrowseCouponsPage() {
 
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {data.coupons.map((coupon) => (
-                <div key={coupon.id} className="rounded-lg border p-4">
+                <Link 
+                  key={coupon.id} 
+                  href={`/player/coupons/${coupon.id}`}
+                  className="rounded-lg border p-4 transition-colors hover:bg-muted/50"
+                >
                   <h3 className="font-semibold">{coupon.name}</h3>
                   <p className="text-sm text-muted-foreground">{coupon.description}</p>
-                  <div className="mt-2 text-sm">
-                    <div>Points: {coupon.pointsPrice}</div>
-                    <div>Available: {coupon.remainingQuantity} / {coupon.totalQuantity}</div>
-                    <div>Valid until: {new Date(coupon.endDate).toLocaleDateString()}</div>
+                  <div className="mt-2 space-y-1 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">Category:</span>
+                      <span>{coupon.category.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">Points:</span>
+                      <span>{coupon.publishPrice}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">Available:</span>
+                      <span>{coupon.remainingQuantity} / {coupon.totalQuantity}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">Valid until:</span>
+                      <span>{new Date(coupon.endDate).toLocaleDateString()}</span>
+                    </div>
                   </div>
-                  <Button className="mt-4 w-full" asChild>
-                    <Link href={`/player/coupons/redeem/${coupon.id}`}>Redeem</Link>
-                  </Button>
-                </div>
+                </Link>
               ))}
             </div>
           </div>
