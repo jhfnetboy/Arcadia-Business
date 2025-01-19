@@ -30,7 +30,73 @@ a basic business flow in initial arcadia version
 #### 注册和登陆
 
   首页 Email 注册，（同时获得 account 地址，todo）
-  验证 email code，或者直接 email 内容链接跳转登陆
+  User, Account, MerchantProfile, playerProfile 关系
+关于账户和角色的关系：唯一确定用户的是 User 表中的 email 字段（设置了 @unique 约束）Account 表只负责存储第三方登录信息（如 Google、GitHub 的认证信息），不涉及角色 角色是通过 merchantProfile 和 playerProfile 这两个关联表来确定的 同一个用户（同一个 email）可以同时拥有商家和玩家两个角色 用户可以有多个 Account（比如可以用 Google 和 GitHub 登录），但这些 Account 都会关联到同一个 User（通过 email 匹配）
+
+User (唯一标识：email) ├── Account[] (第三方登录信息) │ ├── Google 登录 │ └── GitHub 登录 ├── MerchantProfile (商家角色，可选) └── PlayerProfile (玩家角色，可选)
+
+注册和登陆
+首页 Email（唯一）注册，（同时获得 account 地址，todo） 
+ 检查用户是否登录 检查是否有玩家资料 
+ 没有资料时重定向到资料注册页面 创建了玩家资料注册功能： 
+ 创建了资料注册表单 添加了钱包地址验证 实现了资料创建 API 添加了重复钱包地址检查 
+ 用户流程： 
+ 用户首次登录时自动创建用户记录 根据选择的角色进入相应页面： 
+ 商家：检查是否有商家资料，没有则进入商家资料注册 
+ 玩家：检查是否有玩家资料，没有则进入玩家资料注册（需要提供钱包地址） 
+ 完成资料注册后进入相应的主页面
+
+用户通过 Google 登录 
+2. 如果是新用户，系统会自动创建用户记录 根据用户选择的角色（merchant/player），重定向到相应的初始化页面 如果用户已经有相应的角色配置，则直接进入对应的仪表板
+
+模型设计
+检查当前的数据库模型是否完全符合设计要求。
+User 模型关系检查：
+✅ 正确：
+email 字段设置了 @unique 约束作为唯一标识
+与 Account 是一对多关系 (accounts Account[])
+与 MerchantProfile 是可选的一对一关系 (merchantProfile MerchantProfile?)
+与 PlayerProfile 是可选的一对一关系 (playerProfile PlayerProfile?)
+Account 模型关系检查：
+✅ 正确：
+存储第三方登录信息的字段都存在：
+provider: 登录提供商（如 Google、GitHub）
+providerAccountId: 提供商账户 ID
+type: 账户类型
+各种 token 相关字段
+与 User 的关系正确设置：
+userId 外键关联到 User
+@@unique([provider, providerAccountId]) 确保每个提供商的账号唯一
+onDelete: Cascade 确保用户删除时相关账号也被删除
+MerchantProfile 模型关系检查：
+✅ 正确：
+与 User 是一对一可选关系
+userId 设置了 @unique 约束确保一个用户只能有一个商家资料
+包含所需的商家特定字段（businessName, description, address 等）
+PlayerProfile 模型关系检查：
+✅ 正确：
+与 User 是一对一可选关系
+userId 设置了 @unique 约束确保一个用户只能有一个玩家资料
+walletAddress 设置了 @unique 约束确保钱包地址唯一
+关系图确认：
+User (email: @unique)
+├── accounts: Account[] (一对多)
+│   ├── Google 登录信息
+│   └── GitHub 登录信息
+├── merchantProfile: MerchantProfile? (可选一对一)
+└── playerProfile: PlayerProfile? (可选一对一)
+)
+结论：
+✅ 数据库模型完全符合设计要求：
+User 通过 email 唯一标识
+Account 只负责存储第三方登录信息
+角色通过独立的 Profile 表实现
+支持一个用户同时拥有商家和玩家角色
+支持多个第三方账号登录绑定到同一个 User
+建议：
+考虑在 User 模型添加 isEmailVerified 布尔字段，用于邮箱验证状态管理
+考虑在 Profile 模型添加 status 字段，用于管理资料状态（如：待审核、已激活等）
+是否需要我帮你实现这些建议的改进？
 
 #### 商家介绍  
 
