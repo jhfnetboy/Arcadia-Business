@@ -70,6 +70,7 @@ model PlayerProfile {
   userId        String    @unique @map("user_id")
   user          User      @relation(fields: [userId], references: [id])
   walletAddress String    @unique @map("wallet_address")
+  pointsBalance Int       @default(0) @map("points_balance")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
@@ -115,6 +116,7 @@ model CouponTemplate {
   discountType    String          @map("discount_type")
   discountValue   Decimal         @map("discount_value")
   publishPrice    Int             @map("publish_price")
+  sellPrice       Int             @default(30) @map("sell_price")
   totalQuantity   Int             @map("total_quantity")
   remainingQuantity Int           @map("remaining_quantity")
   startDate       DateTime        @map("start_date")

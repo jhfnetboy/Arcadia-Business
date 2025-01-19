@@ -212,6 +212,21 @@ export default function NewCouponForm({ categories, merchant, defaultDates, onSu
             </p>
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="sellPrice">Sell Price (Points)</Label>
+            <Input 
+              id="sellPrice" 
+              name="sellPrice" 
+              type="number"
+              min="1"
+              defaultValue="30"
+              required
+            />
+            <p className="text-sm text-muted-foreground">
+              Points required from players to purchase this coupon
+            </p>
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="startDate">Start Date</Label>

@@ -386,3 +386,9 @@ const discount2 = calculateDiscount(promotionExamples.fullMinus, price, {
 点击 coupon，显示二维码和 passcode
 显示商家介绍：位置、商家名称、商家介绍，图片集合
 
+1. 新增一个给 player 充值 1000 积分的 js 脚本，data 目录下
+2. 新增一个类似于 merchant 的 transaction 入口，指向 player 所有的 points 消费记录，购买了哪个 coupon，链接到 coupon 详情页面
+3. coupon 详情页面点击 redeem 后，检查 player points 余额，如果足够，则购买此 coupon，归于该 player 明显
+4. player 页面，针对每个已经购买 coupon，显示 button：show QR/Passcode,点击后显示coupon的QR和passcode
+5. 预期流程：player 购买每个 coupon 后，新增一条 coupon 记录在 player 名下，包括随机产生 8 位随机字母数字组合的 passcode，要关联到新购买 coupon
+6. QR 产生来自于此 passcode 的 QR

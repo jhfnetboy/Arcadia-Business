@@ -58,6 +58,7 @@ export default async function NewCouponPage() {
     const settings = JSON.parse(formData.get("settings") as string)
     const totalQuantity = Number.parseInt(formData.get("totalQuantity") as string, 10)
     const publishPrice = Number.parseInt(formData.get("publishPrice") as string, 10)
+    const sellPrice = Number.parseInt(formData.get("sellPrice") as string, 10)
     
     // Get start and end dates from form, fallback to default dates if not provided
     const { startDate: defaultStart, endDate: defaultEnd } = getDefaultDates()
@@ -66,7 +67,7 @@ export default async function NewCouponPage() {
 
     // Validate required fields
     if (!name || !description || !categoryId || !type || !settings || 
-        !totalQuantity || !publishPrice || !startDate || !endDate) {
+        !totalQuantity || !publishPrice || !sellPrice || !startDate || !endDate) {
       throw new Error("Please fill in all required fields")
     }
 
@@ -76,6 +77,9 @@ export default async function NewCouponPage() {
     }
     if (publishPrice <= 0) {
       throw new Error("Please enter a valid publish price (must be greater than 0)")
+    }
+    if (sellPrice <= 0) {
+      throw new Error("Please enter a valid sell price (must be greater than 0)")
     }
 
     // Validate dates with friendly messages
@@ -126,6 +130,7 @@ export default async function NewCouponPage() {
           discountType,
           discountValue: new Prisma.Decimal(discountValue),
           publishPrice,
+          sellPrice,
           totalQuantity,
           remainingQuantity: totalQuantity,
           startDate,
