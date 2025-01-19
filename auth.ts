@@ -52,6 +52,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   debug: !!process.env.AUTH_DEBUG,
   theme: { logo: "https://authjs.dev/img/logo-sm.png" },
   adapter: UnstorageAdapter(storage),
+  pages: {
+    signOut: "/"
+  },
   providers: [
     // Apple,
     // Atlassian,
