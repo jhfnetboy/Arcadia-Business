@@ -1,0 +1,113 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id             String           @id @default(cuid())
+  email          String          @unique
+  name           String?
+  image          String?
+  role           String          @default("player")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+  merchantProfile MerchantProfile?
+  issuedCoupons  IssuedCoupon[]
+  transactions   Transaction[]
+
+  @@map("users")
+}
+
+model MerchantProfile {
+  id            String           @id @default(cuid())
+  userId        String          @unique @map("user_id")
+  user          User            @relation(fields: [userId], references: [id])
+  businessName  String          @map("business_name")
+  description   String?
+  address       String?
+  location      Json?
+  images        String[]
+  pointsBalance Int             @default(0) @map("points_balance")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+  coupons       CouponTemplate[]
+  rechargeCodes RechargeCode[]
+
+  @@map("merchant_profiles")
+}
+
+model CouponCategory {
+  id          String           @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime        @default(now()) @map("created_at")
+  coupons     CouponTemplate[]
+
+  @@map("coupon_categories")
+}
+
+model CouponTemplate {
+  id                String           @id @default(cuid())
+  merchantId        String          @map("merchant_id")
+  merchant          MerchantProfile @relation(fields: [merchantId], references: [id])
+  categoryId        String          @map("category_id")
+  category          CouponCategory  @relation(fields: [categoryId], references: [id])
+  name              String
+  description       String?
+  discountType      String          @map("discount_type")
+  discountValue     Decimal?        @map("discount_value")
+  pointsPrice       Int             @map("points_price")
+  totalQuantity     Int             @map("total_quantity")
+  remainingQuantity Int             @map("remaining_quantity")
+  startDate         DateTime        @map("start_date")
+  endDate           DateTime        @map("end_date")
+  status            String          @default("active")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  issuedCoupons     IssuedCoupon[]
+
+  @@map("coupon_templates")
+}
+
+model IssuedCoupon {
+  id          String         @id @default(cuid())
+  templateId  String        @map("template_id")
+  template    CouponTemplate @relation(fields: [templateId], references: [id])
+  userId      String        @map("user_id")
+  user        User          @relation(fields: [userId], references: [id])
+  passCode    String        @unique @map("pass_code")
+  qrCode      String?       @map("qr_code")
+  status      String        @default("unused")
+  usedAt      DateTime?     @map("used_at")
+  createdAt   DateTime      @default(now()) @map("created_at")
+
+  @@map("issued_coupons")
+}
+
+model RechargeCode {
+  id          String          @id @default(cuid())
+  code        String         @unique
+  points      Int
+  merchantId  String         @map("merchant_id")
+  merchant    MerchantProfile @relation(fields: [merchantId], references: [id])
+  status      String         @default("unused")
+  usedAt      DateTime?      @map("used_at")
+  createdAt   DateTime       @default(now()) @map("created_at")
+
+  @@map("recharge_codes")
+}
+
+model Transaction {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  user        User      @relation(fields: [userId], references: [id])
+  type        String
+  amount      Int
+  description String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@map("transactions")
+} 
