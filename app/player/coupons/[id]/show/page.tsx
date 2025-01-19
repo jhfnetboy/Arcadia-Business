@@ -52,7 +52,7 @@ export default async function ShowCouponPage({ params }: { params: { id: string 
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">{issuedCoupon.template.name}</h1>
         <Button asChild variant="outline">
-          <Link href={`/player/coupons/${params.id}`}>Back to Coupon</Link>
+          <Link href="/player">Back to My Coupons</Link>
         </Button>
       </div>
 
