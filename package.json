@@ -20,6 +20,7 @@
   ],
   "dependencies": {
     "@auth/unstorage-adapter": "^2.0.0",
+    "@hookform/resolvers": "^3.10.0",
     "@prisma/client": "^6.2.1",
     "@radix-ui/react-avatar": "^1.0.3",
     "@radix-ui/react-collapsible": "^1.0.3",
@@ -37,9 +38,11 @@
     "next-auth": "beta",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-hook-form": "^7.54.2",
     "tailwind-merge": "^1.14.0",
     "tailwindcss-animate": "^1.0.7",
-    "unstorage": "^1.10.1"
+    "unstorage": "^1.10.1",
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "@types/node": "^20.12.8",

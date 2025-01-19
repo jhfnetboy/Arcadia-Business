@@ -7,10 +7,61 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { useLoadScript, GoogleMap, Marker } from "@react-google-maps/api"
+import { useFormStatus } from "react-dom"
 
 // Chiang Mai coordinates
 const CHIANG_MAI = { lat: 18.7883, lng: 98.9853 }
 const libraries: ("places")[] = ["places"]
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024 // 5MB
+const MAX_UPLOAD_SIZE = 1024 * 1024 // 1MB
+
+// Function to compress image
+async function compressImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      let width = img.width
+      let height = img.height
+      
+      // Calculate new dimensions while maintaining aspect ratio
+      if (width > height) {
+        if (width > 1024) {
+          height = Math.round((height * 1024) / width)
+          width = 1024
+        }
+      } else {
+        if (height > 1024) {
+          width = Math.round((width * 1024) / height)
+          height = 1024
+        }
+      }
+
+      canvas.width = width
+      canvas.height = height
+      
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        reject(new Error('Failed to get canvas context'))
+        return
+      }
+      
+      ctx.drawImage(img, 0, 0, width, height)
+      resolve(canvas.toDataURL('image/jpeg', 0.7)) // Compress with 0.7 quality
+    }
+    img.onerror = () => reject(new Error('Failed to load image'))
+    img.src = URL.createObjectURL(file)
+  })
+}
+
+function SubmitButton() {
+  const { pending } = useFormStatus()
+  return (
+    <Button type="submit" disabled={pending}>
+      {pending ? "Registering..." : "Register"}
+    </Button>
+  )
+}
 
 export default function NewMerchantForm({
   onSubmit
@@ -21,6 +72,8 @@ export default function NewMerchantForm({
   const [address, setAddress] = useState("")
   const [images, setImages] = useState<string[]>([])
   const [geocoder, setGeocoder] = useState<google.maps.Geocoder | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [isProcessing, setIsProcessing] = useState(false)
 
   const { isLoaded } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY as string,
@@ -71,14 +124,62 @@ export default function NewMerchantForm({
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return
     
-    // Here you would normally upload the files to your storage service
-    // For now, we'll just create data URLs
-    const newImages = Array.from(e.target.files).map(file => URL.createObjectURL(file))
-    setImages([...images, ...newImages])
+    // Check file sizes
+    const oversizedFiles = Array.from(e.target.files).filter(file => file.size > MAX_IMAGE_SIZE)
+    if (oversizedFiles.length > 0) {
+      setError(`Some images are too large (max ${MAX_IMAGE_SIZE / 1024 / 1024}MB): ${oversizedFiles.map(f => f.name).join(", ")}`)
+      e.target.value = "" // Clear the input
+      return
+    }
+
+    setIsProcessing(true)
+    setError(null)
+    
+    try {
+      // Compress and convert files to base64
+      const compressedImages = await Promise.all(
+        Array.from(e.target.files).map(compressImage)
+      )
+      
+      // Check compressed sizes
+      const tooLarge = compressedImages.some(dataUrl => {
+        const base64Length = dataUrl.split(',')[1].length
+        const sizeInBytes = base64Length * 0.75 // Convert base64 length to bytes
+        return sizeInBytes > MAX_UPLOAD_SIZE
+      })
+      
+      if (tooLarge) {
+        setError("Images are still too large after compression. Please try smaller images.")
+        e.target.value = ""
+        return
+      }
+
+      setImages([...images, ...compressedImages])
+    } catch (error) {
+      console.error("Error processing images:", error)
+      setError("Failed to process images. Please try again.")
+      e.target.value = "" // Clear the input
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  async function handleSubmit(formData: FormData) {
+    try {
+      setError(null)
+      if (images.length < 3) {
+        setError("Please upload at least 3 images")
+        return
+      }
+      await onSubmit(formData)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred while registering")
+      console.error("Registration error:", err)
+    }
   }
 
   return (
-    <form action={onSubmit}>
+    <form action={handleSubmit}>
       <Card>
         <CardHeader>
           <CardTitle>Register as a Merchant</CardTitle>
@@ -87,6 +188,11 @@ export default function NewMerchantForm({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {error && (
+            <div className="rounded-md bg-red-50 p-4 text-sm text-red-500">
+              {error}
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="businessName">Business Name</Label>
             <Input id="businessName" name="businessName" required />
@@ -132,28 +238,34 @@ export default function NewMerchantForm({
           </div>
 
           <div className="space-y-2">
-            <Label>Business Images (at least 3)</Label>
+            <Label>Business Images (at least 3, max 5MB each)</Label>
             <Input
               type="file"
               accept="image/*"
               multiple
               onChange={handleImageUpload}
               required
+              disabled={isProcessing}
             />
+            {isProcessing && (
+              <div className="text-sm text-muted-foreground">
+                Processing images...
+              </div>
+            )}
             <div className="grid grid-cols-3 gap-2">
-              {images.map((url, i) => (
-                <div key={`${url}-${i}`} className="relative aspect-square">
+              {images.map((url) => (
+                <div key={url} className="relative aspect-square">
                   <img
                     src={url}
-                    alt={`Business location view ${i + 1}`}
+                    alt="Business location view"
                     className="absolute inset-0 h-full w-full rounded-md object-cover"
                   />
                 </div>
               ))}
             </div>
-            {images.map((url, i) => (
+            {images.map((url) => (
               <input
-                key={`${url}-${i}`}
+                key={url}
                 type="hidden"
                 name="images"
                 value={url}
@@ -162,9 +274,7 @@ export default function NewMerchantForm({
           </div>
         </CardContent>
         <CardFooter>
-          <Button type="submit" disabled={images.length < 3}>
-            Register
-          </Button>
+          <SubmitButton />
         </CardFooter>
       </Card>
     </form>

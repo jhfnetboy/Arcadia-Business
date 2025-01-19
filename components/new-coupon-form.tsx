@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -9,97 +9,113 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { MerchantProfile, CouponCategory } from "@prisma/client"
 
-// Promotion types from your enum
+// Promotion types with English names and base points
 const PROMOTION_TYPES = {
   PINDUODUO_GROUP_BUYING: {
-    name: "拼团购",
+    name: "Group Buying Discount",
     affect: "price",
     calculate: "multi",
     num: 0.7,
     require_people_num: 3,
-    description: "多人一起拼单，人数越多价格越低"
+    description: "Get 30% off when 3 people join",
+    basePoints: 8 // Base points for this type
   },
   PINDUODUO_DIRECT_REDUCTION: {
-    name: "直接优惠",
+    name: "Direct Reduction",
     affect: "price",
     calculate: "subtract",
     num: 20,
-    description: "商品直接减去固定金额"
+    description: "Instant ¥20 off",
+    basePoints: 5
   },
   TAOBAO_FULL_MINUS: {
-    name: "满减",
+    name: "Spend & Save",
     affect: "total_order",
     calculate: "subtract",
     num: 50,
     condition: 200,
-    description: "订单满特定金额可减去固定金额"
+    description: "¥50 off when spending ¥200",
+    basePoints: 7
   },
   TAOBAO_COUPON: {
-    name: "店铺优惠券",
+    name: "Store Coupon",
     affect: "price",
     calculate: "subtract",
     num: 10,
     pay_type: "积分",
-    description: "可在店铺使用的代金券"
+    description: "¥10 off store-wide",
+    basePoints: 6
   },
   AMAZON_PERCENTAGE_OFF: {
-    name: "折扣百分比",
+    name: "Percentage Discount",
     affect: "price",
     calculate: "multi",
     num: 0.85,
-    description: "按照商品原价打一定折扣"
+    description: "15% off everything",
+    basePoints: 9
   },
   AMAZON_BUNDLE_SALE: {
-    name: "捆绑销售",
+    name: "Bundle Deal",
     affect: "total_order",
     calculate: "multi",
     condition: 2,
     num: 0.9,
-    description: "多件商品打包销售，享受整体折扣"
+    description: "10% off when buying 2 items",
+    basePoints: 10
   },
   EBAY_DAILY_DEAL: {
-    name: "限时特价",
+    name: "Flash Sale",
     affect: "price",
     calculate: "multi",
     num: 0.6,
     time_limit: true,
-    description: "特定时间段内的超低价促销"
+    description: "40% off for limited time",
+    basePoints: 8
   },
   EBAY_COUPON_CODE: {
-    name: "优惠码",
+    name: "Promo Code",
     affect: "total_order",
     calculate: "subtract",
     num: 15,
     pay_type: "积分",
-    description: "使用特定优惠码享受优惠"
+    description: "¥15 off with promo code",
+    basePoints: 5
   }
-}
-
-type PromotionSettings = {
-  name: string
-  affect: "price" | "total_order"
-  calculate: "multi" | "subtract"
-  num: number
-  require_people_num?: number
-  condition?: number
-  pay_type?: string
-  time_limit?: boolean
-  description: string
-}
+} as const
 
 interface NewCouponFormProps {
-  merchant: MerchantProfile
   categories: CouponCategory[]
+  merchant?: {
+    id: string
+    pointsBalance: number
+  }
   onSubmit: (formData: FormData) => Promise<void>
 }
 
-export default function NewCouponForm({ merchant, categories, onSubmit }: NewCouponFormProps) {
+export default function NewCouponForm({ categories, merchant, onSubmit }: NewCouponFormProps) {
   const [selectedType, setSelectedType] = useState<keyof typeof PROMOTION_TYPES | ''>('')
-  const [settings, setSettings] = useState<PromotionSettings | Record<string, never>>({})
+  const [settings, setSettings] = useState<typeof PROMOTION_TYPES[keyof typeof PROMOTION_TYPES] | Record<string, never>>({})
+  const [quantity, setQuantity] = useState<number>(1)
+  const [totalPoints, setTotalPoints] = useState<number>(0)
+
+  // Calculate total points when type or quantity changes
+  useEffect(() => {
+    if (selectedType && quantity > 0) {
+      const basePoints = PROMOTION_TYPES[selectedType].basePoints
+      setTotalPoints(basePoints * quantity)
+    } else {
+      setTotalPoints(0)
+    }
+  }, [selectedType, quantity])
 
   const handleTypeChange = (type: string) => {
     setSelectedType(type as keyof typeof PROMOTION_TYPES)
     setSettings(PROMOTION_TYPES[type as keyof typeof PROMOTION_TYPES])
+  }
+
+  const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = Number.parseInt(e.target.value, 10) || 0
+    setQuantity(Math.max(1, value)) // Ensure minimum value is 1
   }
 
   return (
@@ -165,28 +181,31 @@ export default function NewCouponForm({ merchant, categories, onSubmit }: NewCou
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="pointsPrice">Points Price</Label>
-            <Input 
-              id="pointsPrice" 
-              name="pointsPrice" 
-              type="number" 
-              min="1" 
-              required 
-            />
-            <p className="text-sm text-muted-foreground">
-              Your balance: {merchant.pointsBalance} points
-            </p>
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="totalQuantity">Total Quantity</Label>
             <Input 
               id="totalQuantity" 
               name="totalQuantity" 
               type="number" 
               min="1" 
+              value={quantity}
+              onChange={handleQuantityChange}
               required 
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="pointsPrice">Points Required</Label>
+            <Input 
+              id="pointsPrice" 
+              name="pointsPrice" 
+              type="number" 
+              value={totalPoints}
+              readOnly
+              className="bg-muted"
+            />
+            <p className="text-sm text-muted-foreground">
+              Your balance: {merchant?.pointsBalance ?? 0} points
+            </p>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -213,7 +232,7 @@ export default function NewCouponForm({ merchant, categories, onSubmit }: NewCou
         </CardContent>
         <CardFooter>
           <div className="flex gap-2">
-            <Button type="submit">
+            <Button type="submit" disabled={totalPoints > (merchant?.pointsBalance ?? 0)}>
               Issue Coupon
             </Button>
             <Button type="button" variant="outline" onClick={() => window.history.back()}>

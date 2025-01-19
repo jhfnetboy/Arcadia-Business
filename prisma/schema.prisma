@@ -95,10 +95,10 @@ model MerchantProfile {
 }
 
 model CouponCategory {
-  id          String           @id @default(cuid())
-  name        String
+  id          String   @id @default(cuid())
+  name        String   @unique
   description String?
-  createdAt   DateTime        @default(now()) @map("created_at")
+  createdAt   DateTime @default(now()) @map("created_at")
   coupons     CouponTemplate[]
 
   @@map("coupon_categories")
@@ -112,8 +112,10 @@ model CouponTemplate {
   category          CouponCategory  @relation(fields: [categoryId], references: [id])
   name              String
   description       String?
+  promotionType     String          @map("promotion_type")
+  settings          Json            @map("settings")
   discountType      String          @map("discount_type")
-  discountValue     Decimal?        @map("discount_value")
+  discountValue     Decimal         @map("discount_value")
   pointsPrice       Int             @map("points_price")
   totalQuantity     Int             @map("total_quantity")
   remainingQuantity Int             @map("remaining_quantity")
