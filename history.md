@@ -512,3 +512,12 @@ const issuedCoupons = [
    - 只有用户主动出示兑换码或二维码时才能核销
    - 每次核销都需要验证商家身份和优惠券所属关系
 
+当用户购买优惠券时，系统会：
+在 IssuedCoupon 中记录 buyPrice（等于购买时的 template.sellPrice）
+在 Transaction 中记录交易详情，包括：
+type: "buy_coupon"
+amount: buyPrice quantity
+quantity: 购买数量
+couponId: 关联到优惠券模板
+status: "completed"
+这样我们就能完整地记录用户的购买历史和实际支付的价格。
