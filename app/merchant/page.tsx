@@ -194,24 +194,45 @@ export default async function MerchantDashboard() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="rounded-lg border p-4">
-          <h2 className="mb-4 text-lg font-semibold">Recent Activity</h2>
-          <div className="text-sm text-muted-foreground">
-            Coming soon...
-          </div>
-        </div>
-        <div className="rounded-lg border p-4">
-          <h2 className="mb-4 text-lg font-semibold">Popular Coupons</h2>
-          <div className="text-sm text-muted-foreground">
-            Coming soon...
-          </div>
-        </div>
-      </div>
-
       <div className="rounded-lg border p-6">
         <h2 className="mb-4 text-lg font-semibold">Write Off Coupons</h2>
         <WriteOffForm checkCoupon={checkCoupon} redeemCoupon={redeemCoupon} />
+      </div>
+
+      <div className="rounded-lg border">
+        <div className="p-4 border-b">
+          <h2 className="text-lg font-semibold">Verify Coupon</h2>
+        </div>
+        <div className="p-4">
+          <form action={checkCoupon} className="flex gap-2">
+            <input
+              type="text"
+              name="passcode"
+              placeholder="Enter coupon code"
+              className="flex-1 px-3 py-2 border rounded-md"
+              required
+            />
+            <Button type="submit">Verify</Button>
+          </form>
+        </div>
+      </div>
+
+      <div className="rounded-lg border">
+        <div className="p-4 border-b">
+          <h2 className="text-lg font-semibold">Recent Activity</h2>
+        </div>
+        <div className="divide-y">
+          {/* Recent Activity Section */}
+        </div>
+      </div>
+
+      <div className="rounded-lg border">
+        <div className="p-4 border-b">
+          <h2 className="text-lg font-semibold">Popular Coupons</h2>
+        </div>
+        <div className="divide-y">
+          {/* Popular Coupons Section */}
+        </div>
       </div>
     </div>
   )

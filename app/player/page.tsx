@@ -97,8 +97,8 @@ export default async function PlayerDashboard() {
                       <h3 className="font-medium">{coupon.template.name}</h3>
                       <p className="text-sm text-muted-foreground">
                         {coupon.template.discountType === "percentage" 
-                          ? `${Number(coupon.template.discountValue)}% off`
-                          : `${Number(coupon.template.discountValue)} off`}
+                          ? `${Number(coupon.template.discountValue).toFixed(0)}% off`
+                          : `${Number(coupon.template.discountValue).toFixed(2)} off`}
                       </p>
                       <div className="mt-2">
                         <p className="text-sm font-medium">{coupon.template.merchant.businessName}</p>
@@ -159,8 +159,8 @@ export default async function PlayerDashboard() {
                       <h3 className="font-medium">{coupon.template.name}</h3>
                       <p className="text-sm text-muted-foreground">
                         {coupon.template.discountType === "percentage" 
-                          ? `${Number(coupon.template.discountValue)}% off`
-                          : `${Number(coupon.template.discountValue)} off`}
+                          ? `${Number(coupon.template.discountValue).toFixed(0)}% off`
+                          : `${Number(coupon.template.discountValue).toFixed(2)} off`}
                       </p>
                       <div className="mt-2">
                         <p className="text-sm font-medium">{coupon.template.merchant.businessName}</p>
