@@ -35,6 +35,19 @@ export default async function MerchantTransactionsPage() {
     redirect("/merchant/new")
   }
 
+  const transactions = await prisma.transaction.findMany({
+    where: {
+      userId: user.id,
+      OR: [
+        { type: "coupon_creation" },    // 发布优惠券
+        { type: "recharge_points" }     // 充值积分
+      ]
+    },
+    orderBy: {
+      createdAt: 'desc'
+    }
+  })
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-6">
@@ -50,7 +63,7 @@ export default async function MerchantTransactionsPage() {
       </div>
 
       <div className="space-y-4">
-        {user.transactions.map((transaction) => (
+        {transactions.map((transaction) => (
           <div key={transaction.id} className="flex items-center justify-between p-4 border rounded-lg">
             <div>
               <div className="font-medium">
@@ -75,7 +88,7 @@ export default async function MerchantTransactionsPage() {
           </div>
         ))}
 
-        {user.transactions.length === 0 && (
+        {transactions.length === 0 && (
           <div className="text-center p-8 border border-dashed rounded-lg text-muted-foreground">
             No transactions yet
           </div>

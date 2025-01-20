@@ -18,8 +18,8 @@ function formatDate(date: Date): string {
 // Get default start and end dates
 function getDefaultDates() {
   const now = new Date()
-  // Round to nearest future hour
-  const startDate = new Date(Math.ceil(now.getTime() / (60 * 60 * 1000)) * (60 * 60 * 1000))
+  // Round to nearest future hour and add 3 hours buffer
+  const startDate = new Date(Math.ceil(now.getTime() / (60 * 60 * 1000)) * (60 * 60 * 1000) + 3 * 60 * 60 * 1000)
   const endDate = new Date(startDate.getTime() + 15 * 24 * 60 * 60 * 1000) // 15 days from start
   
   // Format for datetime-local input
@@ -152,7 +152,7 @@ export default async function NewCouponPage() {
     }
     
     if (endDate <= startDate) {
-      throw new Error(`End date must be after start date`)
+      throw new Error('End date must be after start date')
     }
 
     // Get promotion type details from database
