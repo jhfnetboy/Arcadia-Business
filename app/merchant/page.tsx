@@ -173,7 +173,7 @@ export default async function MerchantDashboard() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-lg border p-4">
           <div className="text-sm text-muted-foreground">Points Balance</div>
           <div className="mt-1 text-2xl font-bold">{stats.pointsBalance}</div>

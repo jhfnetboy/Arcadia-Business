@@ -31,7 +31,7 @@ export default async function HomePage() {
           <div className="rounded-lg border p-6">
             <h2 className="text-xl font-semibold">For Players</h2>
             <p className="mt-2 text-muted-foreground">
-              Discover great deals and earn rewards while shopping.
+              Discover great deals and earn rewards while playing.
             </p>
             <Link 
               href="/auth/signin?callbackUrl=/player/new"
@@ -73,7 +73,7 @@ export default async function HomePage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-3xl font-bold">Welcome, {username}</h1>
-        <p className="text-muted-foreground">Get started with Arcadia - Your Gateway to Smart Shopping</p>
+        <p className="text-muted-foreground">Get started with Arcadia - Your Gateway to Smart Business</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -122,7 +122,7 @@ export default async function HomePage() {
           ) : (
             <>
               <p className="mt-2 text-muted-foreground">
-                Smart Shopping Starts Here
+                Smart Business Starts Here
               </p>
               <p className="text-sm text-muted-foreground">
                 Register as a player to browse and redeem coupons using points.

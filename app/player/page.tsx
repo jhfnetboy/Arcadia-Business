@@ -55,16 +55,13 @@ export default async function PlayerDashboard() {
           <Button asChild variant="outline">
             <Link href="/player/transactions">Transaction History</Link>
           </Button>
-          <Button asChild>
-            <Link href="/player/coupons">My Coupons</Link>
-          </Button>
           <Button asChild variant="secondary">
             <Link href="/player/browse">Browse Coupons</Link>
           </Button>
         </div>
       </div>
 
-      <div className="grid gap-4 grid-cols-2">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
         <div className="rounded-lg border p-4">
           <div className="text-sm text-muted-foreground">Unused Coupons</div>
           <div className="mt-1 text-xl sm:text-2xl font-bold">{userCoupons.unused.length}</div>
