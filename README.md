@@ -1,8 +1,11 @@
 # Introduction
 
 There are two branched you can use:
-main: Business Coupon System for business to issue coupons and player to redeem coupons and write off it.
-basic: Basic Authentication System, you can use it as a basic authentication system to develop your own application.
+**main**: Business Coupon System for business to issue coupons and player to redeem coupons and write off it. It will be updated frequently.
+
+**basic**: Initial version of the business coupon system, it is a basic authentication system, you can use it as a basic authentication system to develop your own application.
+
+**simple-auth**:Basic Authentication System using NextAuthjs, you can use it as a basic authentication system to develop your own application.
 
 
 ## Business Coupon System
