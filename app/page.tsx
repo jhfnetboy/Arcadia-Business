@@ -11,8 +11,8 @@ export default async function HomePage() {
     return (
       <div className="flex flex-col gap-6">
         <div>
-          <h1 className="text-3xl font-bold">Welcome to Arcadia</h1>
-          <p className="text-muted-foreground">Get New Customers with Smart Promotions</p>
+          <h1 className="text-3xl font-bold">Welcome to Arcadia Smart Business</h1>
+          <h2 className="text-muted-foreground">Get New Customers by Web3</h2>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="rounded-lg border p-6">

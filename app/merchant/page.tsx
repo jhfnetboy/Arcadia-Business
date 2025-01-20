@@ -1,13 +1,12 @@
-import { auth } from "auth"
+import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
-import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import WriteOffForm from "@/components/write-off-form"
 
-export default async function MerchantDashboardPage() {
+export default async function MerchantDashboard() {
   const session = await auth()
-  
-  // If not signed in, redirect to sign in page
   if (!session?.user?.email) {
     redirect("/auth/signin?callbackUrl=/merchant")
   }
@@ -45,13 +44,98 @@ export default async function MerchantDashboardPage() {
     pointsBalance: user.merchantProfile.pointsBalance
   }
 
-  // Display merchant dashboard
+  async function checkCoupon(formData: FormData) {
+    "use server"
+    
+    const passcode = formData.get("passcode")
+    if (!passcode || typeof passcode !== "string") {
+      throw new Error("Please enter a valid passcode")
+    }
+
+    const coupon = await prisma.issuedCoupon.findUnique({
+      where: { passCode: passcode },
+      include: {
+        template: {
+          include: {
+            merchant: true,
+          }
+        },
+        user: true
+      }
+    })
+
+    if (!coupon) {
+      throw new Error("Coupon not found")
+    }
+
+    if (coupon.template.merchantId !== user.merchantProfile.id) {
+      throw new Error("This coupon was not issued by your store")
+    }
+
+    if (coupon.status === "used") {
+      throw new Error("This coupon has already been redeemed")
+    }
+
+    if (new Date(coupon.template.endDate) < new Date()) {
+      throw new Error("This coupon has expired")
+    }
+
+    return {
+      id: coupon.id,
+      name: coupon.template.name,
+      description: coupon.template.description,
+      playerName: coupon.user.name || "",
+      playerEmail: coupon.user.email || "",
+      promotionType: coupon.template.promotionType,
+      discountType: coupon.template.discountType,
+      discountValue: coupon.template.discountValue,
+      status: coupon.status,
+      createdAt: coupon.createdAt.toISOString(),
+      expiresAt: coupon.template.endDate.toISOString(),
+    }
+  }
+
+  async function redeemCoupon(id: string) {
+    "use server"
+
+    const coupon = await prisma.issuedCoupon.findUnique({
+      where: { id },
+      include: {
+        template: true,
+      }
+    })
+
+    if (!coupon) {
+      throw new Error("Coupon not found")
+    }
+
+    if (coupon.template.merchantId !== user.merchantProfile.id) {
+      throw new Error("This coupon was not issued by your store")
+    }
+
+    if (coupon.status === "used") {
+      throw new Error("This coupon has already been redeemed")
+    }
+
+    if (new Date(coupon.expiresAt) < new Date()) {
+      throw new Error("This coupon has expired")
+    }
+
+    await prisma.issuedCoupon.update({
+      where: { id },
+      data: { status: "used" },
+    })
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">{user.merchantProfile.businessName}</h1>
           <p className="text-muted-foreground">{user.merchantProfile.description}</p>
+          <Button asChild variant="link" className="h-auto p-0 text-muted-foreground hover:text-primary">
+            <Link href="/merchant/edit">Edit Profile</Link>
+          </Button>
         </div>
         <div className="flex gap-2">
           <Button asChild>
@@ -98,6 +182,11 @@ export default async function MerchantDashboardPage() {
             Coming soon...
           </div>
         </div>
+      </div>
+
+      <div className="rounded-lg border p-6">
+        <h2 className="mb-4 text-lg font-semibold">Write Off Coupons</h2>
+        <WriteOffForm checkCoupon={checkCoupon} redeemCoupon={redeemCoupon} />
       </div>
     </div>
   )
