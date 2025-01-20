@@ -1,18 +1,16 @@
-import { auth } from "auth"
+import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
-import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import Image from "next/image"
 
 export default async function PlayerDashboard() {
   const session = await auth()
-  
-  // If not signed in, redirect to sign in page
   if (!session?.user?.email) {
     redirect("/auth/signin?callbackUrl=/player")
   }
 
-  // Get user with player profile and coupons
   const user = await prisma.user.findUnique({
     where: { email: session.user.email },
     include: {
@@ -21,7 +19,8 @@ export default async function PlayerDashboard() {
         include: {
           template: {
             include: {
-              merchant: true
+              merchant: true,
+              category: true
             }
           }
         }
@@ -29,71 +28,163 @@ export default async function PlayerDashboard() {
     }
   })
 
-  // If no user found, redirect to homepage
   if (!user) {
     redirect("/")
   }
 
-  // If no player profile, redirect to new player page
   if (!user.playerProfile) {
     redirect("/player/new")
   }
 
-  // Group coupons by status
-  const coupons = {
+  // Group user's coupons by status
+  const userCoupons = {
     unused: user.issuedCoupons.filter(c => c.status === "unused"),
-    used: user.issuedCoupons.filter(c => c.status === "used"),
-    expired: user.issuedCoupons.filter(c => c.status === "expired")
+    used: user.issuedCoupons.filter(c => c.status === "used")
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Player Dashboard</h1>
-        <Button asChild>
-          <Link href="/player/browse">Browse Coupons</Link>
+    <div className="flex flex-col gap-6 container mx-auto px-4 sm:px-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold">My Coupons</h1>
+          <p className="text-muted-foreground">
+            Points Balance: {user.playerProfile.points_balance}
+          </p>
+        </div>
+        <Button asChild variant="outline">
+          <Link href="/player/transactions">Transaction History</Link>
         </Button>
       </div>
 
-      <div className="text-muted-foreground">
-        Wallet Address: {user.playerProfile.walletAddress}
+      <div className="grid gap-4 grid-cols-2">
+        <div className="rounded-lg border p-4">
+          <div className="text-sm text-muted-foreground">Unused Coupons</div>
+          <div className="mt-1 text-xl sm:text-2xl font-bold">{userCoupons.unused.length}</div>
+        </div>
+        <div className="rounded-lg border p-4">
+          <div className="text-sm text-muted-foreground">Used Coupons</div>
+          <div className="mt-1 text-xl sm:text-2xl font-bold">{userCoupons.used.length}</div>
+        </div>
       </div>
-      
-      <div className="grid gap-6">
-        <div>
-          <h2 className="mb-4 text-xl font-semibold">Your Coupons</h2>
-          {user.issuedCoupons.length === 0 ? (
-            <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
-              No coupons yet. Click "Browse Coupons" to get started.
-            </div>
-          ) : (
-            <div className="grid gap-6">
-              {Object.entries(coupons).map(([status, statusCoupons]) => (
-                statusCoupons.length > 0 && (
-                  <div key={status}>
-                    <h3 className="mb-3 text-lg font-medium capitalize">{status} Coupons</h3>
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                      {statusCoupons.map((coupon) => (
-                        <Link 
-                          key={coupon.id} 
-                          href={`/player/coupons/${coupon.id}`}
-                          className="rounded-lg border p-4 transition-colors hover:bg-muted/50"
-                        >
-                          <h4 className="font-semibold">{coupon.template.name}</h4>
-                          <p className="text-sm text-muted-foreground">
-                            {coupon.template.description}
-                          </p>
-                          <div className="mt-2 text-sm">
-                            <div>Merchant: {coupon.template.merchant.businessName}</div>
-                            <div>Pass Code: {coupon.passCode}</div>
-                            {coupon.qrCode && <div>QR Code available</div>}
-                          </div>
-                        </Link>
-                      ))}
+
+      {/* Unused Coupons Section */}
+      <div className="rounded-lg border">
+        <div className="p-4 border-b">
+          <h2 className="text-lg font-semibold">Unused Coupons</h2>
+        </div>
+        <div className="divide-y">
+          {userCoupons.unused.map((coupon) => (
+            <div key={coupon.id} className="p-4">
+              <div className="flex flex-col sm:flex-row gap-4">
+                {coupon.template.merchant.images?.[0] && (
+                  <div className="relative w-full sm:w-48 h-32 rounded-lg overflow-hidden">
+                    <Image
+                      src={coupon.template.merchant.images[0]}
+                      alt={coupon.template.merchant.business_name}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                )}
+                <div className="flex-1">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                    <div>
+                      <h3 className="font-medium">{coupon.template.name}</h3>
+                      <p className="text-sm text-muted-foreground">{coupon.template.description}</p>
+                      <div className="mt-2">
+                        <p className="text-sm font-medium">{coupon.template.merchant.business_name}</p>
+                        <p className="text-sm text-muted-foreground">{coupon.template.merchant.address}</p>
+                        {coupon.template.merchant.location && (
+                          <a
+                            href={`https://www.google.com/maps?q=${coupon.template.merchant.location.lat},${coupon.template.merchant.location.lng}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-600 hover:underline"
+                          >
+                            View on Map
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-medium">
+                        {coupon.template.sell_price} points
+                      </div>
+                      <Button asChild className="mt-2" size="sm">
+                        <Link href={`/player/coupons/${coupon.id}`}>View Details</Link>
+                      </Button>
                     </div>
                   </div>
-                )
-              ))}
+                </div>
+              </div>
+            </div>
+          ))}
+          {userCoupons.unused.length === 0 && (
+            <div className="p-4 text-center text-muted-foreground">
+              No unused coupons
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Used Coupons Section */}
+      <div className="rounded-lg border">
+        <div className="p-4 border-b">
+          <h2 className="text-lg font-semibold">Used Coupons</h2>
+        </div>
+        <div className="divide-y">
+          {userCoupons.used.map((coupon) => (
+            <div key={coupon.id} className="p-4">
+              <div className="flex flex-col sm:flex-row gap-4">
+                {coupon.template.merchant.images?.[0] && (
+                  <div className="relative w-full sm:w-48 h-32 rounded-lg overflow-hidden">
+                    <Image
+                      src={coupon.template.merchant.images[0]}
+                      alt={coupon.template.merchant.business_name}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                )}
+                <div className="flex-1">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                    <div>
+                      <h3 className="font-medium">{coupon.template.name}</h3>
+                      <p className="text-sm text-muted-foreground">{coupon.template.description}</p>
+                      <div className="mt-2">
+                        <p className="text-sm font-medium">{coupon.template.merchant.business_name}</p>
+                        <p className="text-sm text-muted-foreground">{coupon.template.merchant.address}</p>
+                        {coupon.template.merchant.location && (
+                          <a
+                            href={`https://www.google.com/maps?q=${coupon.template.merchant.location.lat},${coupon.template.merchant.location.lng}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-600 hover:underline"
+                          >
+                            View on Map
+                          </a>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Used at: {coupon.usedAt?.toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-medium">
+                        {coupon.template.sell_price} points
+                      </div>
+                      <Button asChild className="mt-2" size="sm">
+                        <Link href={`/player/coupons/${coupon.id}`}>View Details</Link>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+          {userCoupons.used.length === 0 && (
+            <div className="p-4 text-center text-muted-foreground">
+              No used coupons
             </div>
           )}
         </div>

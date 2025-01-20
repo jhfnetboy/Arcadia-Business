@@ -392,3 +392,122 @@ const discount2 = calculateDiscount(promotionExamples.fullMinus, price, {
 4. player 页面，针对每个已经购买 coupon，显示 button：show QR/Passcode,点击后显示coupon的QR和passcode
 5. 预期流程：player 购买每个 coupon 后，新增一条 coupon 记录在 player 名下，包括随机产生 8 位随机字母数字组合的 passcode，要关联到新购买 coupon
 6. QR 产生来自于此 passcode 的 QR
+
+                                                            
+优惠券的发行和核销过程：
+优惠券发行流程：
+商家创建优惠券模板（CouponTemplate）
+玩家购买优惠券时，系统会：
+创建一个已发行优惠券（IssuedCoupon）记录
+生成唯一的兑换码（passCode）
+将优惠券与购买的玩家（User）关联
+设置初始状态为 "unused"
+优惠券状态：
+unused：已购买但未使用
+used：已使用（核销后的状态）
+每个已发行的优惠券都有状态、使用时间（usedAt）等属性
+核销流程：
+商家输入优惠券兑换码
+系统检查：
+优惠券是否存在
+是否属于该商家
+是否已使用
+是否已过期
+核销成功后：
+更新状态为 "used"
+记录使用时间
+
+### 发行和使用数据模型
+
+```prisma
+// 优惠券模板表 - coupon_templates
+model CouponTemplate {
+  id               String          @id
+  merchantId       String          // 所属商家
+  name            String          // 优惠券名称
+  totalQuantity   Int             // 发行总量，例如10张
+  remainingQuantity Int           // 剩余可售数量
+  status          String          // 模板状态：active/inactive
+  // ... 其他字段
+  issuedCoupons   IssuedCoupon[]  // 关联到已发行的优惠券
+}
+
+// 已发行优惠券表 - issued_coupons
+model IssuedCoupon {
+  id          String         @id
+  templateId  String         // 关联的模板ID
+  userId      String         // 购买的用户ID
+  passCode    String         // 唯一兑换码
+  status      String         // 优惠券状态：unused/used
+  usedAt      DateTime?      // 使用时间
+  createdAt   DateTime       // 购买时间
+}
+```
+
+### 状态流转示例
+
+假设商家发行 10 张优惠券的场景：
+
+```typescript
+// 1. 商家创建优惠券模板
+const template = {
+  id: "ct_001",
+  merchantId: "m_001",
+  totalQuantity: 10,
+  remainingQuantity: 10,
+  status: "active"
+}
+
+// 2. 当 10 个不同用户购买时，会创建 10 条 IssuedCoupon 记录
+const issuedCoupons = [
+  {
+    id: "ic_001",
+    templateId: "ct_001",
+    userId: "user_001",
+    passCode: "ABCD1234",
+    status: "unused",
+    createdAt: "2024-01-20"
+  },
+  {
+    id: "ic_002",
+    templateId: "ct_001",
+    userId: "user_002",
+    passCode: "EFGH5678",
+    status: "used",          // 已被核销
+    usedAt: "2024-01-21",   // 核销时间
+    createdAt: "2024-01-20"
+  },
+  // ... 其他 8 张优惠券记录
+]
+```
+
+### 状态追踪
+- 在 `CouponTemplate` 表中：
+  - `totalQuantity` 记录发行总量（10）
+  - `remainingQuantity` 记录剩余可售数量（每售出一张减 1）
+  - `status` 记录模板状态（是否可继续售卖）
+
+- 在 `IssuedCoupon` 表中：
+  - 每张售出的优惠券都有独立记录
+  - 每条记录都有自己的 `status`（unused/used）
+  - 每条记录都有自己的 `passCode`（用于核销）
+  - 核销时记录 `usedAt` 时间
+
+### 数据关系
+- 一个 `CouponTemplate` 可以有多个 `IssuedCoupon`（一对多）
+- 每个 `IssuedCoupon` 必须属于一个 `CouponTemplate`（多对一）
+- 每个 `IssuedCoupon` 属于一个 `User`（多对一）
+
+### 状态变化
+- 优惠券模板创建：`remainingQuantity = totalQuantity`
+- 优惠券售出：`remainingQuantity -= 1`，创建 `IssuedCoupon` 记录（status = "unused"）
+- 优惠券核销：更新对应 `IssuedCoupon` 记录（status = "used"，设置 usedAt）
+
+### 安全性考虑
+1. 商家只能看到优惠券的部分信息：
+   - 用户名只显示前三个字符，其余用 *** 代替
+   - 优惠券兑换码只显示后四位，其余用 **** 代替
+2. 核销流程的安全性：
+   - 商家无法直接获取完整的优惠券兑换码
+   - 只有用户主动出示兑换码或二维码时才能核销
+   - 每次核销都需要验证商家身份和优惠券所属关系

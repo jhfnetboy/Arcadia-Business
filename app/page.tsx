@@ -1,7 +1,8 @@
-import { auth } from "auth"
+import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import Link from "next/link"
+import { Prisma } from "@prisma/client"
 
 export default async function HomePage() {
   const session = await auth()
@@ -44,14 +45,23 @@ export default async function HomePage() {
     )
   }
 
-  // Get user with profiles
+  // Get user with profiles and unused coupons
   const user = await prisma.user.findUnique({
     where: { email: session.user.email },
     include: {
       merchantProfile: true,
-      playerProfile: true
+      playerProfile: true,
+      issuedCoupons: {
+        where: { status: "unused" }
+      }
     }
-  })
+  }) as Prisma.UserGetPayload<{
+    include: {
+      merchantProfile: true;
+      playerProfile: true;
+      issuedCoupons: { where: { status: string } };
+    };
+  }>;
 
   if (!user) {
     redirect("/auth/signin")
@@ -106,7 +116,7 @@ export default async function HomePage() {
                 Points Balance: {user.playerProfile.pointsBalance} points
               </p>
               <p className="text-sm text-muted-foreground">
-                Coupons: {user.playerProfile.issuedCoupons?.length || 0}
+                Unused Coupons: {user.issuedCoupons.length}
               </p>
             </>
           ) : (

@@ -49,7 +49,7 @@ export default async function MerchantDashboard() {
     
     const passcode = formData.get("passcode")
     if (!passcode || typeof passcode !== "string") {
-      throw new Error("Please enter a valid passcode")
+      throw new Error("Please enter a valid coupon code")
     }
 
     const coupon = await prisma.issuedCoupon.findUnique({
@@ -65,7 +65,7 @@ export default async function MerchantDashboard() {
     })
 
     if (!coupon) {
-      throw new Error("Coupon not found")
+      throw new Error("Coupon not found. Please check the code and try again")
     }
 
     if (coupon.template.merchantId !== user.merchantProfile.id) {
@@ -73,11 +73,15 @@ export default async function MerchantDashboard() {
     }
 
     if (coupon.status === "used") {
-      throw new Error("This coupon has already been redeemed")
+      const usedTime = coupon.usedAt?.toLocaleString() ?? "unknown time"
+      throw new Error(`This coupon has already been redeemed at ${usedTime}`)
     }
 
-    if (new Date(coupon.template.endDate) < new Date()) {
-      throw new Error("This coupon has expired")
+    const now = new Date()
+    const endDate = new Date(coupon.template.endDate)
+    if (now > endDate) {
+      const timeAgo = Math.floor((now.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24))
+      throw new Error(`This coupon expired ${timeAgo} days ago (Expiry: ${endDate.toLocaleString()})`)
     }
 
     return {
@@ -88,7 +92,7 @@ export default async function MerchantDashboard() {
       playerEmail: coupon.user.email || "",
       promotionType: coupon.template.promotionType,
       discountType: coupon.template.discountType,
-      discountValue: coupon.template.discountValue,
+      discountValue: Number(coupon.template.discountValue), // Convert Decimal to Number
       status: coupon.status,
       createdAt: coupon.createdAt.toISOString(),
       expiresAt: coupon.template.endDate.toISOString(),
@@ -114,16 +118,23 @@ export default async function MerchantDashboard() {
     }
 
     if (coupon.status === "used") {
-      throw new Error("This coupon has already been redeemed")
+      const usedTime = coupon.usedAt?.toLocaleString() ?? "unknown time"
+      throw new Error(`This coupon has already been redeemed at ${usedTime}`)
     }
 
-    if (new Date(coupon.expiresAt) < new Date()) {
-      throw new Error("This coupon has expired")
+    const now = new Date()
+    const endDate = new Date(coupon.template.endDate)
+    if (now > endDate) {
+      const timeAgo = Math.floor((now.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24))
+      throw new Error(`This coupon expired ${timeAgo} days ago (Expiry: ${endDate.toLocaleString()})`)
     }
 
     await prisma.issuedCoupon.update({
       where: { id },
-      data: { status: "used" },
+      data: { 
+        status: "used",
+        usedAt: now
+      },
     })
   }
 
@@ -143,6 +154,9 @@ export default async function MerchantDashboard() {
           </Button>
           <Button asChild>
             <Link href="/merchant/coupons/new">Issue New Coupon</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/merchant/coupons/used">Used Coupons</Link>
           </Button>
           <Button asChild variant="outline">
             <Link href="/merchant/transactions">Transaction History</Link>
