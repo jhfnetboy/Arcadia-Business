@@ -5,7 +5,7 @@ There are two branched you can use:
 
 **basic**: Initial version of the business coupon system, it is a basic authentication system, you can use it as a basic authentication system to develop your own application.
 
-**simple-auth**:Basic Authentication System using NextAuthjs, you can use it as a basic authentication system to develop your own application.
+**nextauth**:Basic Authentication System using NextAuthjs, you can use it as a basic authentication system to develop your own application.
 
 
 ## Business Coupon System
