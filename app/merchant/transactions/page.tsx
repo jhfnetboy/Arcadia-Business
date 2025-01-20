@@ -22,7 +22,11 @@ export default async function MerchantTransactionsPage() {
           ]
         },
         include: {
-          coupon: true
+          coupon: {
+            include: {
+              merchant: true
+            }
+          }
         },
         orderBy: {
           createdAt: 'desc'
@@ -75,7 +79,7 @@ export default async function MerchantTransactionsPage() {
                     </div>
                   </>
                 ) : (
-                  "Created Recharge Code"
+                  "Points Recharge"
                 )}
               </div>
               <div className="text-sm text-muted-foreground">

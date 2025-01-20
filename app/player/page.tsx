@@ -88,7 +88,7 @@ export default async function PlayerDashboard() {
                   <div className="relative w-full sm:w-48 h-32 rounded-lg overflow-hidden">
                     <Image
                       src={coupon.template.merchant.images[0]}
-                      alt={coupon.template.merchant.business_name}
+                      alt={coupon.template.merchant.businessName}
                       fill
                       className="object-cover"
                     />
@@ -98,25 +98,27 @@ export default async function PlayerDashboard() {
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                     <div>
                       <h3 className="font-medium">{coupon.template.name}</h3>
-                      <p className="text-sm text-muted-foreground">{coupon.template.description}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {coupon.template.discountType === "percentage" 
+                          ? `${Number(coupon.template.discountValue)}% off`
+                          : `${Number(coupon.template.discountValue)} off`}
+                      </p>
                       <div className="mt-2">
-                        <p className="text-sm font-medium">{coupon.template.merchant.business_name}</p>
+                        <p className="text-sm font-medium">{coupon.template.merchant.businessName}</p>
                         <p className="text-sm text-muted-foreground">{coupon.template.merchant.address}</p>
-                        {coupon.template.merchant.location && (
-                          <a
-                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(coupon.template.merchant.business_name)}&ll=${coupon.template.merchant.location.lat},${coupon.template.merchant.location.lng}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-blue-600 hover:underline"
-                          >
-                            View on Map
-                          </a>
-                        )}
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${coupon.template.merchant.businessName} ${coupon.template.merchant.address || ''}`)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-600 hover:underline"
+                        >
+                          View on Map
+                        </a>
                       </div>
                     </div>
                     <div className="text-right">
                       <div className="font-medium">
-                        Cost: {coupon.template.sell_price} points
+                        Cost: {coupon.template.publishPrice} points
                       </div>
                       <Button asChild className="mt-2" size="sm">
                         <Link href={`/player/coupons/${coupon.id}/show`}>Detail</Link>
@@ -148,7 +150,7 @@ export default async function PlayerDashboard() {
                   <div className="relative w-full sm:w-48 h-32 rounded-lg overflow-hidden">
                     <Image
                       src={coupon.template.merchant.images[0]}
-                      alt={coupon.template.merchant.business_name}
+                      alt={coupon.template.merchant.businessName}
                       fill
                       className="object-cover"
                     />
@@ -158,20 +160,22 @@ export default async function PlayerDashboard() {
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                     <div>
                       <h3 className="font-medium">{coupon.template.name}</h3>
-                      <p className="text-sm text-muted-foreground">{coupon.template.description}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {coupon.template.discountType === "percentage" 
+                          ? `${Number(coupon.template.discountValue)}% off`
+                          : `${Number(coupon.template.discountValue)} off`}
+                      </p>
                       <div className="mt-2">
-                        <p className="text-sm font-medium">{coupon.template.merchant.business_name}</p>
+                        <p className="text-sm font-medium">{coupon.template.merchant.businessName}</p>
                         <p className="text-sm text-muted-foreground">{coupon.template.merchant.address}</p>
-                        {coupon.template.merchant.location && (
-                          <a
-                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(coupon.template.merchant.business_name)}&ll=${coupon.template.merchant.location.lat},${coupon.template.merchant.location.lng}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-blue-600 hover:underline"
-                          >
-                            View on Map
-                          </a>
-                        )}
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${coupon.template.merchant.businessName} ${coupon.template.merchant.address || ''}`)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-600 hover:underline"
+                        >
+                          View on Map
+                        </a>
                       </div>
                       <p className="text-sm text-muted-foreground mt-2">
                         Used at: {coupon.usedAt?.toLocaleString()}
@@ -179,7 +183,7 @@ export default async function PlayerDashboard() {
                     </div>
                     <div className="text-right">
                       <div className="font-medium">
-                        Cost: {coupon.template.sell_price} points
+                        Cost: {coupon.template.publishPrice} points
                       </div>
                       <Button asChild className="mt-2" size="sm">
                         <Link href={`/player/coupons/${coupon.id}/show`}>Detail</Link>

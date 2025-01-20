@@ -38,10 +38,19 @@ export default async function MerchantDashboard() {
   }
 
   const stats = {
-    totalCoupons: user.merchantProfile.coupons.length,
-    activeCoupons: user.merchantProfile.coupons.filter(t => t.status === 'active').length,
-    issuedCoupons: user.merchantProfile.coupons.reduce((acc, t) => acc + t.issuedCoupons.length, 0),
-    pointsBalance: user.merchantProfile.pointsBalance
+    pointsBalance: user.merchantProfile.pointsBalance,
+    totalCoupons: {
+      types: user.merchantProfile.coupons.length,
+      quantity: user.merchantProfile.coupons.reduce((acc, t) => acc + t.totalQuantity, 0)
+    },
+    activeCoupons: {
+      types: user.merchantProfile.coupons.filter(t => t.status === 'active').length,
+      quantity: user.merchantProfile.coupons
+        .filter(t => t.status === 'active')
+        .reduce((acc, t) => acc + t.remainingQuantity, 0)
+    },
+    redeemedCoupons: user.merchantProfile.coupons.reduce((acc, t) => 
+      acc + t.issuedCoupons.filter(ic => ic.status === 'used').length, 0)
   }
 
   async function checkCoupon(formData: FormData) {
@@ -171,15 +180,17 @@ export default async function MerchantDashboard() {
         </div>
         <div className="rounded-lg border p-4">
           <div className="text-sm text-muted-foreground">Total Coupons</div>
-          <div className="mt-1 text-2xl font-bold">{stats.totalCoupons}</div>
+          <div className="mt-1 text-2xl font-bold">{stats.totalCoupons.quantity}</div>
+          <div className="text-sm text-muted-foreground">({stats.totalCoupons.types} types)</div>
         </div>
         <div className="rounded-lg border p-4">
           <div className="text-sm text-muted-foreground">Active Coupons</div>
-          <div className="mt-1 text-2xl font-bold">{stats.activeCoupons}</div>
+          <div className="mt-1 text-2xl font-bold">{stats.activeCoupons.quantity}</div>
+          <div className="text-sm text-muted-foreground">({stats.activeCoupons.types} types)</div>
         </div>
         <div className="rounded-lg border p-4">
-          <div className="text-sm text-muted-foreground">Issued Coupons</div>
-          <div className="mt-1 text-2xl font-bold">{stats.issuedCoupons}</div>
+          <div className="text-sm text-muted-foreground">Redeemed Coupons</div>
+          <div className="mt-1 text-2xl font-bold">{stats.redeemedCoupons}</div>
         </div>
       </div>
 

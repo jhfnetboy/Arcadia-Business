@@ -17,10 +17,16 @@ function formatDate(date: Date): string {
 
 // Get default start and end dates
 function getDefaultDates() {
+  // Get current time in local timezone
   const now = new Date()
-  // Round to nearest future hour and add 3 hours buffer
-  const startDate = new Date(Math.ceil(now.getTime() / (60 * 60 * 1000)) * (60 * 60 * 1000) + 3 * 60 * 60 * 1000)
+  console.log('Current time:', now.toLocaleString())
+  
+  // Set start time to current time plus 12 hours
+  const startDate = new Date(now.getTime() + 12 * 60 * 60 * 1000)
   const endDate = new Date(startDate.getTime() + 15 * 24 * 60 * 60 * 1000) // 15 days from start
+  
+  console.log('Start time:', startDate.toLocaleString())
+  console.log('End time:', endDate.toLocaleString())
   
   // Format for datetime-local input
   return {
