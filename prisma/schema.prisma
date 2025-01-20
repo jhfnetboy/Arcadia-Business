@@ -126,6 +126,7 @@ model CouponTemplate {
   merchant        MerchantProfile @relation(fields: [merchantId], references: [id])
   category        CouponCategory  @relation(fields: [categoryId], references: [id])
   issuedCoupons   IssuedCoupon[]
+  transactions    Transaction[]
 
   @@map("coupon_templates")
 }
@@ -138,6 +139,7 @@ model IssuedCoupon {
   user        User          @relation(fields: [userId], references: [id])
   passCode    String        @unique @map("pass_code")
   qrCode      String?       @map("qr_code")
+  buyPrice    Int           @map("buy_price")
   status      String        @default("unused")
   usedAt      DateTime?     @map("used_at")
   createdAt   DateTime      @default(now()) @map("created_at")
@@ -164,6 +166,9 @@ model Transaction {
   user        User      @relation(fields: [userId], references: [id])
   type        String
   amount      Int
+  quantity    Int       @default(1)
+  couponId    String?   @map("coupon_id")
+  coupon      CouponTemplate? @relation(fields: [couponId], references: [id])
   status      String
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")

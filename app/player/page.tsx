@@ -96,7 +96,7 @@ export default async function PlayerDashboard() {
                         <p className="text-sm text-muted-foreground">{coupon.template.merchant.address}</p>
                         {coupon.template.merchant.location && (
                           <a
-                            href={`https://www.google.com/maps?q=${coupon.template.merchant.location.lat},${coupon.template.merchant.location.lng}`}
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(coupon.template.merchant.business_name)}&ll=${coupon.template.merchant.location.lat},${coupon.template.merchant.location.lng}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-sm text-blue-600 hover:underline"
@@ -108,10 +108,10 @@ export default async function PlayerDashboard() {
                     </div>
                     <div className="text-right">
                       <div className="font-medium">
-                        {coupon.template.sell_price} points
+                        Cost: {coupon.template.sell_price} points
                       </div>
                       <Button asChild className="mt-2" size="sm">
-                        <Link href={`/player/coupons/${coupon.id}`}>View Details</Link>
+                        <Link href={`/player/coupons/${coupon.id}/show`}>Detail</Link>
                       </Button>
                     </div>
                   </div>
@@ -156,7 +156,7 @@ export default async function PlayerDashboard() {
                         <p className="text-sm text-muted-foreground">{coupon.template.merchant.address}</p>
                         {coupon.template.merchant.location && (
                           <a
-                            href={`https://www.google.com/maps?q=${coupon.template.merchant.location.lat},${coupon.template.merchant.location.lng}`}
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(coupon.template.merchant.business_name)}&ll=${coupon.template.merchant.location.lat},${coupon.template.merchant.location.lng}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-sm text-blue-600 hover:underline"
@@ -171,10 +171,10 @@ export default async function PlayerDashboard() {
                     </div>
                     <div className="text-right">
                       <div className="font-medium">
-                        {coupon.template.sell_price} points
+                        Cost: {coupon.template.sell_price} points
                       </div>
                       <Button asChild className="mt-2" size="sm">
-                        <Link href={`/player/coupons/${coupon.id}`}>View Details</Link>
+                        <Link href={`/player/coupons/${coupon.id}/show`}>Detail</Link>
                       </Button>
                     </div>
                   </div>
