@@ -494,6 +494,7 @@ const issuedCoupons = [
   - 核销时记录 `usedAt` 时间
 
 ### 数据关系
+
 - 一个 `CouponTemplate` 可以有多个 `IssuedCoupon`（一对多）
 - 每个 `IssuedCoupon` 必须属于一个 `CouponTemplate`（多对一）
 - 每个 `IssuedCoupon` 属于一个 `User`（多对一）

@@ -18,7 +18,7 @@ async function main() {
       // Add points to player
       prisma.playerProfile.update({
         where: { id: player.id },
-        data: { points_balance: { increment: 1000 } }
+        data: { pointsBalance: { increment: 1000 } }
       }),
       // Create transaction record
       prisma.transaction.create({
