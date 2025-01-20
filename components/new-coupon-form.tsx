@@ -9,82 +9,20 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { MerchantProfile, CouponCategory } from "@prisma/client"
 
-// Promotion types with English names and base points
-const PROMOTION_TYPES = {
-  PINDUODUO_GROUP_BUYING: {
-    name: "Group Buying Discount",
-    affect: "price",
-    calculate: "multi",
-    num: 0.7,
-    require_people_num: 3,
-    description: "Get 30% off when 3 people join",
-    basePoints: 8 // Base points for this type
-  },
-  PINDUODUO_DIRECT_REDUCTION: {
-    name: "Direct Reduction",
-    affect: "price",
-    calculate: "subtract",
-    num: 20,
-    description: "Instant ¥20 off",
-    basePoints: 5
-  },
-  TAOBAO_FULL_MINUS: {
-    name: "Spend & Save",
-    affect: "total_order",
-    calculate: "subtract",
-    num: 50,
-    condition: 200,
-    description: "¥50 off when spending ¥200",
-    basePoints: 7
-  },
-  TAOBAO_COUPON: {
-    name: "Store Coupon",
-    affect: "price",
-    calculate: "subtract",
-    num: 10,
-    pay_type: "积分",
-    description: "¥10 off store-wide",
-    basePoints: 6
-  },
-  AMAZON_PERCENTAGE_OFF: {
-    name: "Percentage Discount",
-    affect: "price",
-    calculate: "multi",
-    num: 0.85,
-    description: "15% off everything",
-    basePoints: 9
-  },
-  AMAZON_BUNDLE_SALE: {
-    name: "Bundle Deal",
-    affect: "total_order",
-    calculate: "multi",
-    condition: 2,
-    num: 0.9,
-    description: "10% off when buying 2 items",
-    basePoints: 10
-  },
-  EBAY_DAILY_DEAL: {
-    name: "Flash Sale",
-    affect: "price",
-    calculate: "multi",
-    num: 0.6,
-    time_limit: true,
-    description: "40% off for limited time",
-    basePoints: 8
-  },
-  EBAY_COUPON_CODE: {
-    name: "Promo Code",
-    affect: "total_order",
-    calculate: "subtract",
-    num: 15,
-    pay_type: "积分",
-    description: "¥15 off with promo code",
-    basePoints: 5
-  }
-} as const
-
 interface NewCouponFormProps {
   categories: CouponCategory[]
+  promotionTypes: {
+    type: string
+    name: string
+    affect: string
+    calculate: string
+    num: number
+    require_people_num?: number
+    condition?: number
+    pay_type?: string
+    description: string
+    basePoints: number
+  }[]
   merchant?: {
     id: string
     pointsBalance: number
@@ -96,29 +34,52 @@ interface NewCouponFormProps {
   onSubmit: (formData: FormData) => Promise<void>
 }
 
-export default function NewCouponForm({ categories, merchant, defaultDates, onSubmit }: NewCouponFormProps) {
-  const [selectedType, setSelectedType] = useState<keyof typeof PROMOTION_TYPES | ''>('')
-  const [settings, setSettings] = useState<typeof PROMOTION_TYPES[keyof typeof PROMOTION_TYPES] | Record<string, never>>({})
+export default function NewCouponForm({ 
+  categories, 
+  promotionTypes,
+  merchant, 
+  defaultDates, 
+  onSubmit 
+}: NewCouponFormProps) {
+  const [selectedType, setSelectedType] = useState<string>('')
   const [quantity, setQuantity] = useState<number>(1)
-  const [publishPrice, setPublishPrice] = useState<number>(0)
+  const [publishCost, setPublishCost] = useState<number>(0)
 
-  // Calculate publish price when type changes
+  // Log promotion types when component mounts
+  useEffect(() => {
+    console.log('Promotion Types in component:', promotionTypes)
+  }, [promotionTypes])
+
+  // Calculate publish cost when type or quantity changes
   useEffect(() => {
     if (selectedType) {
-      const basePoints = PROMOTION_TYPES[selectedType].basePoints
-      setPublishPrice(basePoints)
+      const promotionType = promotionTypes.find(pt => pt.type === selectedType)
+      console.log('Selected promotion type:', promotionType)
+      if (promotionType) {
+        const cost = promotionType.basePoints * quantity
+        console.log('Calculating cost:', { 
+          type: selectedType,
+          basePoints: promotionType.basePoints, 
+          quantity, 
+          cost 
+        })
+        setPublishCost(cost)
+      }
     } else {
-      setPublishPrice(0)
+      setPublishCost(0)
     }
-  }, [selectedType])
+  }, [selectedType, quantity, promotionTypes])
 
   const handleTypeChange = (type: string) => {
-    setSelectedType(type as keyof typeof PROMOTION_TYPES)
-    setSettings(PROMOTION_TYPES[type as keyof typeof PROMOTION_TYPES])
+    console.log('Type changed to:', type)
+    const promotionType = promotionTypes.find(pt => pt.type === type)
+    console.log('Selected promotion type data:', promotionType)
+    setSelectedType(type)
   }
 
   const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = Number.parseInt(e.target.value, 10) || 0
+    const value = Number.parseInt(e.target.value, 10) || 1 // Default to 1 instead of 0
+    console.log('Quantity changed to:', value)
     setQuantity(Math.max(1, value)) // Ensure minimum value is 1
   }
 
@@ -165,23 +126,18 @@ export default function NewCouponForm({ categories, merchant, defaultDates, onSu
                 <SelectValue placeholder="Select a promotion type" />
               </SelectTrigger>
               <SelectContent>
-                {Object.entries(PROMOTION_TYPES).map(([key, value]) => (
-                  <SelectItem key={key} value={key}>
-                    {value.name}
+                {promotionTypes.map((promotionType) => (
+                  <SelectItem key={promotionType.type} value={promotionType.type}>
+                    {promotionType.name} ({promotionType.basePoints} points)
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             {selectedType && (
               <p className="text-sm text-muted-foreground">
-                {PROMOTION_TYPES[selectedType].description}
+                {promotionTypes.find(pt => pt.type === selectedType)?.description}
               </p>
             )}
-            <input 
-              type="hidden" 
-              name="settings" 
-              value={JSON.stringify(settings)} 
-            />
           </div>
 
           <div className="space-y-2">
@@ -191,73 +147,57 @@ export default function NewCouponForm({ categories, merchant, defaultDates, onSu
               name="totalQuantity" 
               type="number" 
               min="1" 
-              value={quantity}
+              value={quantity.toString()} // Convert to string to avoid NaN warning
               onChange={handleQuantityChange}
               required 
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="publishPrice">Publish Price</Label>
+            <Label htmlFor="publishCost">Publish Cost (Total Points)</Label>
             <Input 
-              id="publishPrice" 
-              name="publishPrice" 
+              id="publishCost" 
+              name="publishCost" 
               type="number" 
-              value={publishPrice}
+              value={publishCost.toString()} // Convert to string to avoid NaN warning
               readOnly
               className="bg-muted"
             />
             <p className="text-sm text-muted-foreground">
-              Total points needed to publish: {publishPrice * quantity} (Your balance: {merchant?.pointsBalance ?? 0} points)
+              Total points needed: {publishCost} (Your balance: {merchant?.pointsBalance ?? 0} points)
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="sellPrice">Sell Price (Points)</Label>
+            <Label htmlFor="startDate">Start Date</Label>
             <Input 
-              id="sellPrice" 
-              name="sellPrice" 
-              type="number"
-              min="1"
-              defaultValue="30"
-              required
+              id="startDate" 
+              name="startDate" 
+              type="datetime-local"
+              defaultValue={defaultDates?.startDate?.slice(0, 16)}
+              required 
             />
-            <p className="text-sm text-muted-foreground">
-              Points required from players to purchase this coupon
-            </p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="startDate">Start Date</Label>
-              <Input 
-                id="startDate" 
-                name="startDate" 
-                type="datetime-local" 
-                required 
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="endDate">End Date</Label>
-              <Input 
-                id="endDate" 
-                name="endDate" 
-                type="datetime-local" 
-                required 
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="endDate">End Date</Label>
+            <Input 
+              id="endDate" 
+              name="endDate" 
+              type="datetime-local"
+              defaultValue={defaultDates?.endDate?.slice(0, 16)}
+              required 
+            />
           </div>
         </CardContent>
         <CardFooter>
-          <div className="flex gap-2">
-            <Button type="submit" disabled={publishPrice * quantity > (merchant?.pointsBalance ?? 0)}>
-              Issue Coupon
-            </Button>
-            <Button type="button" variant="outline" onClick={() => window.history.back()}>
-              Cancel
-            </Button>
-          </div>
+          <Button 
+            type="submit" 
+            className="w-full"
+            disabled={publishCost > (merchant?.pointsBalance ?? 0)}
+          >
+            Create Coupon
+          </Button>
         </CardFooter>
       </Card>
     </form>

@@ -1,10 +1,10 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-}
-
-generator client {
-  provider = "prisma-client-js"
 }
 
 model Account {
@@ -13,15 +13,14 @@ model Account {
   type              String
   provider          String
   providerAccountId String  @map("provider_account_id")
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
   @@map("accounts")
@@ -38,20 +37,19 @@ model Session {
 }
 
 model User {
-  id             String           @id @default(cuid())
-  email          String          @unique
-  name           String?
-  image          String?
-  emailVerified  DateTime?       @map("email_verified")
-  createdAt      DateTime        @default(now()) @map("created_at")
-  updatedAt      DateTime        @updatedAt @map("updated_at")
-  
-  accounts       Account[]
-  sessions       Session[]
+  id              String           @id @default(cuid())
+  email           String           @unique
+  name            String?
+  image           String?
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  emailVerified   DateTime?        @map("email_verified")
+  accounts        Account[]
+  issuedCoupons   IssuedCoupon[]
   merchantProfile MerchantProfile?
   playerProfile   PlayerProfile?
-  issuedCoupons  IssuedCoupon[]
-  transactions   Transaction[]
+  sessions        Session[]
+  transactions    Transaction[]
 
   @@map("users")
 }
@@ -66,112 +64,134 @@ model VerificationToken {
 }
 
 model PlayerProfile {
-  id            String    @id @default(cuid())
-  userId        String    @unique @map("user_id")
-  user          User      @relation(fields: [userId], references: [id])
-  walletAddress String    @unique @map("wallet_address")
-  pointsBalance Int       @default(0) @map("points_balance")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  id            String   @id @default(cuid())
+  userId        String   @unique @map("user_id")
+  walletAddress String   @unique @map("wallet_address")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  pointsBalance Int      @default(0) @map("points_balance")
+  user          User     @relation(fields: [userId], references: [id])
 
   @@map("player_profiles")
 }
 
 model MerchantProfile {
   id            String           @id @default(cuid())
-  userId        String          @unique @map("user_id")
-  user          User            @relation(fields: [userId], references: [id])
-  businessName  String          @map("business_name")
+  userId        String           @unique @map("user_id")
+  businessName  String           @map("business_name")
   description   String?
   address       String?
   location      Json?
   images        String[]
-  pointsBalance Int             @default(0) @map("points_balance")
-  createdAt     DateTime        @default(now()) @map("created_at")
-  updatedAt     DateTime        @updatedAt @map("updated_at")
+  pointsBalance Int              @default(0) @map("points_balance")
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
   coupons       CouponTemplate[]
+  user          User             @relation(fields: [userId], references: [id])
   rechargeCodes RechargeCode[]
 
   @@map("merchant_profiles")
 }
 
 model CouponCategory {
-  id          String   @id @default(cuid())
-  name        String   @unique
+  id          String           @id @default(cuid())
+  name        String           @unique
   description String?
-  createdAt   DateTime @default(now()) @map("created_at")
+  createdAt   DateTime         @default(now()) @map("created_at")
   coupons     CouponTemplate[]
 
   @@map("coupon_categories")
 }
 
+model PromotionType {
+  id               String           @id @default(cuid())
+  type             String           @unique
+  name             String
+  basePoints       Int
+  affect           String
+  calculate        String
+  description      String
+  defaultNum       Float?
+  requirePeopleNum Int?
+  condition        Int?
+  timeLimit        Boolean          @default(false)
+  payType          String?
+  payNum           Int?
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+  coupons          CouponTemplate[] @relation("PromotionTypeToCouponTemplate")
+
+  @@map("promotion_types")
+}
+
 model CouponTemplate {
-  id               String          @id @default(cuid())
-  merchantId       String          @map("merchant_id")
-  categoryId       String          @map("category_id")
-  name            String
-  description     String?
-  promotionType   String          @map("promotion_type")
-  settings        Json
-  discountType    String          @map("discount_type")
-  discountValue   Decimal         @map("discount_value")
-  publishPrice    Int             @map("publish_price")
-  sellPrice       Int             @default(30) @map("sell_price")
-  totalQuantity   Int             @map("total_quantity")
-  remainingQuantity Int           @map("remaining_quantity")
-  startDate       DateTime        @map("start_date")
-  endDate         DateTime        @map("end_date")
-  status          String          @default("active")
-  createdAt       DateTime        @default(now()) @map("created_at")
-  merchant        MerchantProfile @relation(fields: [merchantId], references: [id])
-  category        CouponCategory  @relation(fields: [categoryId], references: [id])
-  issuedCoupons   IssuedCoupon[]
-  transactions    Transaction[]
+  id                String          @id @default(cuid())
+  merchantId        String          @map("merchant_id")
+  categoryId        String          @map("category_id")
+  name              String
+  description       String?
+  discountType      String          @map("discount_type")
+  discountValue     Decimal         @map("discount_value")
+  totalQuantity     Int             @map("total_quantity")
+  remainingQuantity Int             @map("remaining_quantity")
+  startDate         DateTime        @map("start_date")
+  endDate           DateTime        @map("end_date")
+  status            String          @default("active")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  settings          Json
+  publishPrice      Int             @map("publish_price")
+  sellPrice         Int             @default(30) @map("sell_price")
+  promotionType     String          @map("promotion_type")
+  category          CouponCategory  @relation(fields: [categoryId], references: [id])
+  merchant          MerchantProfile @relation(fields: [merchantId], references: [id])
+  promotion         PromotionType   @relation("PromotionTypeToCouponTemplate", fields: [promotionType], references: [type])
+  issuedCoupons     IssuedCoupon[]
+  transactions      Transaction[]
 
   @@map("coupon_templates")
 }
 
 model IssuedCoupon {
-  id          String         @id @default(cuid())
-  templateId  String        @map("template_id")
-  template    CouponTemplate @relation(fields: [templateId], references: [id])
-  userId      String        @map("user_id")
-  user        User          @relation(fields: [userId], references: [id])
-  passCode    String        @unique @map("pass_code")
-  qrCode      String?       @map("qr_code")
-  buyPrice    Int           @map("buy_price")
-  status      String        @default("unused")
-  usedAt      DateTime?     @map("used_at")
-  createdAt   DateTime      @default(now()) @map("created_at")
+  id         String         @id @default(cuid())
+  templateId String         @map("template_id")
+  userId     String         @map("user_id")
+  passCode   String         @unique @map("pass_code")
+  qrCode     String?        @map("qr_code")
+  status     String         @default("unused")
+  usedAt     DateTime?      @map("used_at")
+  createdAt  DateTime       @default(now()) @map("created_at")
+  buyPrice   Int            @map("buy_price")
+  template   CouponTemplate @relation(fields: [templateId], references: [id])
+  user       User           @relation(fields: [userId], references: [id])
 
   @@map("issued_coupons")
 }
 
 model RechargeCode {
-  id          String          @id @default(cuid())
-  code        String         @unique
-  points      Int
-  merchantId  String         @map("merchant_id")
-  merchant    MerchantProfile @relation(fields: [merchantId], references: [id])
-  status      String         @default("unused")
-  usedAt      DateTime?      @map("used_at")
-  createdAt   DateTime       @default(now()) @map("created_at")
+  id         String          @id @default(cuid())
+  code       String          @unique
+  points     Int
+  merchantId String          @map("merchant_id")
+  status     String          @default("unused")
+  usedAt     DateTime?       @map("used_at")
+  createdAt  DateTime        @default(now()) @map("created_at")
+  merchant   MerchantProfile @relation(fields: [merchantId], references: [id])
 
   @@map("recharge_codes")
 }
 
 model Transaction {
-  id          String    @id @default(cuid())
-  userId      String    @map("user_id")
-  user        User      @relation(fields: [userId], references: [id])
-  type        String
-  amount      Int
-  quantity    Int       @default(1)
-  couponId    String?   @map("coupon_id")
-  coupon      CouponTemplate? @relation(fields: [couponId], references: [id])
-  status      String
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  id        String          @id @default(cuid())
+  userId    String          @map("user_id")
+  type      String
+  amount    Int
+  createdAt DateTime        @default(now()) @map("created_at")
+  status    String
+  updatedAt DateTime        @updatedAt @map("updated_at")
+  couponId  String?         @map("coupon_id")
+  quantity  Int             @default(1)
+  coupon    CouponTemplate? @relation(fields: [couponId], references: [id])
+  user      User            @relation(fields: [userId], references: [id])
 
   @@map("transactions")
-} 
+}
