@@ -1,4 +1,4 @@
-import { auth } from "auth"
+import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { Button } from "@/components/ui/button"
@@ -25,24 +25,24 @@ export default async function ShowCouponPage({ params }: { params: { id: string 
     redirect(`/auth/signin?callbackUrl=/player/coupons/${params.id}/show`)
   }
 
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
+  const issuedCoupon = await prisma.issuedCoupon.findUnique({
+    where: { id: params.id },
     include: {
-      playerProfile: true,
-      issuedCoupons: {
-        where: { templateId: params.id },
-        include: { template: true }
+      template: true,
+      user: {
+        include: {
+          playerProfile: true
+        }
       }
     }
-  }) as UserWithRelations | null
+  })
 
-  if (!user?.playerProfile) {
-    redirect("/player/new")
+  if (!issuedCoupon) {
+    redirect("/player")
   }
 
-  const issuedCoupon = user.issuedCoupons[0]
-  if (!issuedCoupon) {
-    redirect(`/player/coupons/${params.id}`)
+  if (issuedCoupon.user.email !== session.user.email) {
+    redirect("/player")
   }
 
   // Generate QR code
