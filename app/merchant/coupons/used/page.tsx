@@ -4,6 +4,20 @@ import { prisma } from "@/lib/prisma"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 
+// Helper function to format discount display
+function formatDiscount(type: string, value: number): string {
+  // Round to 2 decimal places
+  const roundedValue = Number(value.toFixed(2))
+  
+  if (type === "percentage") {
+    // Ensure percentage is between 0 and 100
+    const normalizedValue = Math.max(0, Math.min(100, roundedValue))
+    return `${normalizedValue}% off`
+  } else {
+    return `${roundedValue} off`
+  }
+}
+
 export default async function UsedCouponsPage() {
   const session = await auth()
   if (!session?.user?.email) {
@@ -78,10 +92,9 @@ export default async function UsedCouponsPage() {
                 <td className="p-4">{coupon.userName}</td>
                 <td className="p-4">{coupon.passCode}</td>
                 <td className="p-4">
-                  {coupon.discountType === "percentage" 
-                    ? `${(1 - Number(coupon.discountValue)) * 100}% off`
-                    : `$${Number(coupon.discountValue)} off`
-                  }
+                  <div className="text-sm text-muted-foreground">
+                    Discount: {formatDiscount(coupon.discountType, coupon.discountValue)}
+                  </div>
                 </td>
                 <td className="p-4">{coupon.usedAt?.toLocaleString()}</td>
                 <td className="p-4">

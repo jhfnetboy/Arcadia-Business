@@ -4,6 +4,19 @@ import { prisma } from "@/lib/prisma"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 
+// Helper function to format discount display
+function formatDiscount(type: string, value: number): string {
+  // Round to 2 decimal places
+  const roundedValue = Number(value.toFixed(2))
+  
+  if (type === "percentage") {
+    // Ensure percentage is between 0 and 100
+    const normalizedValue = Math.max(0, Math.min(100, roundedValue))
+    return `${normalizedValue}% off`
+  }
+  return `${roundedValue} off`
+}
+
 export default async function MerchantCouponsPage() {
   const session = await auth()
   
@@ -127,9 +140,7 @@ export default async function MerchantCouponsPage() {
               <div className="mt-1 grid gap-2 sm:grid-cols-2">
                 <div>Type: {coupon.promotionType}</div>
                 <div>
-                  Discount: {coupon.discountType === 'percentage' ? 
-                    `${coupon.discountValue}% off` : 
-                    `¥${coupon.discountValue} off`}
+                  Discount: {formatDiscount(coupon.discountType, Number(coupon.discountValue))}
                 </div>
               </div>
             </div>

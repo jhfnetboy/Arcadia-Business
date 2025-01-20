@@ -179,11 +179,12 @@ export default async function NewCouponPage() {
     // For percentage discounts (e.g. 0.8 for 20% off)
     if (promotionType.calculate === "multi") {
       discountType = "percentage"
-      discountValue = promotionType.defaultNum ? (1 - promotionType.defaultNum) * 100 : 0 // Convert to percentage off (e.g. 20 for 20% off)
+      // Convert to percentage off (e.g. 20 for 20% off) and round to 2 decimal places
+      discountValue = Number(((1 - (promotionType.defaultNum ?? 0)) * 100).toFixed(2))
     } else {
       // For fixed amount discounts (e.g. 100 for $100 off)
       discountType = "fixed"
-      discountValue = promotionType.defaultNum ?? 0
+      discountValue = Number((promotionType.defaultNum ?? 0).toFixed(2))
     }
 
     // Use transaction to ensure data consistency:
