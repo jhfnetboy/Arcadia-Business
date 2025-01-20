@@ -5,11 +5,11 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function generatePasscode() {
+export function generatePasscode(length: number = 8): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-  let passcode = ''
-  for (let i = 0; i < 8; i++) {
-    passcode += chars.charAt(Math.floor(Math.random() * chars.length))
+  let result = ''
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length))
   }
-  return passcode
+  return result
 }

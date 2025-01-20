@@ -81,7 +81,7 @@ export default async function BrowseCouponsPage() {
       <div className="grid gap-8">
         {Object.entries(couponsByMerchant).map(([merchantId, data]) => (
           <div key={merchantId} className="rounded-lg border p-6">
-            <div className="mb-4 flex items-start gap-4">
+            <div className="mb-4 flex flex-col sm:flex-row items-start gap-4">
               <img
                 src={data.merchantImage}
                 alt={data.merchantName}

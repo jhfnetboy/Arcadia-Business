@@ -1,10 +1,11 @@
-import { auth } from "auth"
+import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import QRCode from "qrcode"
 import type { Prisma } from "@prisma/client"
+import { cn } from "@/lib/utils"
 
 type UserWithRelations = Prisma.UserGetPayload<{
   include: {
@@ -24,24 +25,24 @@ export default async function ShowCouponPage({ params }: { params: { id: string 
     redirect(`/auth/signin?callbackUrl=/player/coupons/${params.id}/show`)
   }
 
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
+  const issuedCoupon = await prisma.issuedCoupon.findUnique({
+    where: { id: params.id },
     include: {
-      playerProfile: true,
-      issuedCoupons: {
-        where: { templateId: params.id },
-        include: { template: true }
+      template: true,
+      user: {
+        include: {
+          playerProfile: true
+        }
       }
     }
-  }) as UserWithRelations | null
+  })
 
-  if (!user?.playerProfile) {
-    redirect("/player/new")
+  if (!issuedCoupon) {
+    redirect("/player")
   }
 
-  const issuedCoupon = user.issuedCoupons[0]
-  if (!issuedCoupon) {
-    redirect(`/player/coupons/${params.id}`)
+  if (issuedCoupon.user.email !== session.user.email) {
+    redirect("/player")
   }
 
   // Generate QR code
@@ -73,9 +74,15 @@ export default async function ShowCouponPage({ params }: { params: { id: string 
           </div>
 
           <div className="space-y-2 text-sm text-muted-foreground">
-            <div className="flex justify-between">
-              <span>Status</span>
-              <span className="font-semibold text-foreground">{issuedCoupon.status}</span>
+            <div className="flex items-center gap-2">
+              <div className="text-sm text-muted-foreground">Status:</div>
+              <div className={cn(
+                "text-sm font-medium",
+                issuedCoupon.status === "unused" && "text-green-500",
+                issuedCoupon.status === "used" && "text-red-500"
+              )}>
+                {issuedCoupon.status}
+              </div>
             </div>
             <div className="flex justify-between">
               <span>Purchased</span>

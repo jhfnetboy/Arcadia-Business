@@ -1,7 +1,8 @@
-import { auth } from "auth"
+import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import Link from "next/link"
+import { Prisma } from "@prisma/client"
 
 export default async function HomePage() {
   const session = await auth()
@@ -11,8 +12,8 @@ export default async function HomePage() {
     return (
       <div className="flex flex-col gap-6">
         <div>
-          <h1 className="text-3xl font-bold">Welcome to Arcadia</h1>
-          <p className="text-muted-foreground">Get New Customers with Smart Promotions</p>
+          <h1 className="text-3xl font-bold">Welcome to Arcadia Smart Business</h1>
+          <h2 className="text-muted-foreground">Get New Customers by Web3</h2>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="rounded-lg border p-6">
@@ -30,7 +31,7 @@ export default async function HomePage() {
           <div className="rounded-lg border p-6">
             <h2 className="text-xl font-semibold">For Players</h2>
             <p className="mt-2 text-muted-foreground">
-              Discover great deals and earn rewards while shopping.
+              Discover great deals and earn rewards while playing.
             </p>
             <Link 
               href="/auth/signin?callbackUrl=/player/new"
@@ -44,14 +45,23 @@ export default async function HomePage() {
     )
   }
 
-  // Get user with profiles
+  // Get user with profiles and unused coupons
   const user = await prisma.user.findUnique({
     where: { email: session.user.email },
     include: {
       merchantProfile: true,
-      playerProfile: true
+      playerProfile: true,
+      issuedCoupons: {
+        where: { status: "unused" }
+      }
     }
-  })
+  }) as Prisma.UserGetPayload<{
+    include: {
+      merchantProfile: true;
+      playerProfile: true;
+      issuedCoupons: { where: { status: string } };
+    };
+  }>;
 
   if (!user) {
     redirect("/auth/signin")
@@ -63,7 +73,7 @@ export default async function HomePage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-3xl font-bold">Welcome, {username}</h1>
-        <p className="text-muted-foreground">Get started with Arcadia - Your Gateway to Smart Shopping</p>
+        <p className="text-muted-foreground">Get started with Arcadia - Your Gateway to Smart Business</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -106,13 +116,13 @@ export default async function HomePage() {
                 Points Balance: {user.playerProfile.pointsBalance} points
               </p>
               <p className="text-sm text-muted-foreground">
-                Coupons: {user.playerProfile.issuedCoupons?.length || 0}
+                Unused Coupons: {user.issuedCoupons.length}
               </p>
             </>
           ) : (
             <>
               <p className="mt-2 text-muted-foreground">
-                Smart Shopping Starts Here
+                Smart Business Starts Here
               </p>
               <p className="text-sm text-muted-foreground">
                 Register as a player to browse and redeem coupons using points.
