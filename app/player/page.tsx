@@ -51,9 +51,17 @@ export default async function PlayerDashboard() {
             Points Balance: {user.playerProfile.points_balance}
           </p>
         </div>
-        <Button asChild variant="outline">
-          <Link href="/player/transactions">Transaction History</Link>
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button asChild variant="outline">
+            <Link href="/player/transactions">Transaction History</Link>
+          </Button>
+          <Button asChild>
+            <Link href="/player/coupons">My Coupons</Link>
+          </Button>
+          <Button asChild variant="secondary">
+            <Link href="/player/browse">Browse Coupons</Link>
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 grid-cols-2">

@@ -1,111 +1,111 @@
-// 优惠券基础类型
-export type PromotionBase = {
-  name: string
-  affect: "price" | "total_order"
-  calculate: "multi" | "subtract"
-  description: string
-}
+import { PrismaClient } from '@prisma/client'
 
-// 拼团购 - 多人拼单享受折扣
-export type GroupBuyingPromotion = PromotionBase & {
-  type: "PINDUODUO_GROUP_BUYING"
-  num: number // 折扣比例，如 0.7 表示 7 折
-  require_people_num: number // 所需人数
-}
+const prisma = new PrismaClient()
 
-// 直接优惠 - 直减固定金额
-export type DirectReductionPromotion = PromotionBase & {
-  type: "PINDUODUO_DIRECT_REDUCTION"
-  num: number // 直减金额
-}
-
-// 满减优惠 - 满足条件减固定金额
-export type FullMinusPromotion = PromotionBase & {
-  type: "TAOBAO_FULL_MINUS"
-  num: number // 减免金额
-  condition: number // 满足金额条件
-}
-
-// 店铺优惠券 - 使用积分兑换的代金券
-export type StoreCouponPromotion = PromotionBase & {
-  type: "TAOBAO_COUPON"
-  num: number // 优惠金额
-  pay_type: "积分"
-  pay_num: number // 所需积分
-}
-
-// 折扣优惠 - 按比例折扣
-export type PercentageOffPromotion = PromotionBase & {
-  type: "AMAZON_PERCENTAGE_OFF"
-  num: number // 折扣比例，如 0.85 表示 85 折
-}
-
-// 捆绑销售 - 多件商品打包优惠
-export type BundleSalePromotion = PromotionBase & {
-  type: "AMAZON_BUNDLE_SALE"
-  num: number // 折扣比例，如 0.9 表示 9 折
-  condition: number // 所需商品数量
-}
-
-// 限时特价 - 特定时间段内的折扣
-export type DailyDealPromotion = PromotionBase & {
-  type: "EBAY_DAILY_DEAL"
-  num: number // 折扣比例，如 0.6 表示 6 折
-  time_limit: true
-}
-
-// 优惠码 - 使用特定代码享受优惠
-export type CouponCodePromotion = PromotionBase & {
-  type: "EBAY_COUPON_CODE"
-  num: number // 优惠金额
-  pay_type: "积分"
-}
-
-// 所有优惠类型的联合类型
-export type PromotionType =
-  | GroupBuyingPromotion
-  | DirectReductionPromotion
-  | FullMinusPromotion
-  | StoreCouponPromotion
-  | PercentageOffPromotion
-  | BundleSalePromotion
-  | DailyDealPromotion
-  | CouponCodePromotion
-
-// 优惠计算函数
-export function calculateDiscount(
-  promotion: PromotionType,
-  price: number,
-  options?: {
-    totalOrder?: number
-    peopleCount?: number
-    itemCount?: number
-    currentTime?: Date
+const promotionTypes = [
+  {
+    type: "PINDUODUO_GROUP_BUYING",
+    name: "拼团购",
+    basePoints: 50,
+    affect: "price",
+    calculate: "multi",
+    description: "多人拼单享受折扣",
+    defaultNum: 0.7,        // 7 折
+    requirePeopleNum: 3     // 需要 3 人成团
+  },
+  {
+    type: "PINDUODUO_DIRECT_REDUCTION",
+    name: "直接优惠",
+    basePoints: 30,
+    affect: "price",
+    calculate: "subtract",
+    description: "直减固定金额",
+    defaultNum: 20          // 直减 20 元
+  },
+  {
+    type: "TAOBAO_FULL_MINUS",
+    name: "满减优惠",
+    basePoints: 40,
+    affect: "total_order",
+    calculate: "subtract",
+    description: "满足条件减固定金额",
+    defaultNum: 50,         // 减 50 元
+    condition: 200          // 满 200 元
+  },
+  {
+    type: "TAOBAO_COUPON",
+    name: "店铺优惠券",
+    basePoints: 35,
+    affect: "price",
+    calculate: "subtract",
+    description: "使用积分兑换的代金券",
+    defaultNum: 10,         // 减 10 元
+    payType: "积分",
+    payNum: 100            // 需要 100 积分
+  },
+  {
+    type: "AMAZON_PERCENTAGE_OFF",
+    name: "折扣优惠",
+    basePoints: 45,
+    affect: "price",
+    calculate: "multi",
+    description: "按比例折扣",
+    defaultNum: 0.85        // 85 折
+  },
+  {
+    type: "AMAZON_BUNDLE_SALE",
+    name: "捆绑销售",
+    basePoints: 55,
+    affect: "total_order",
+    calculate: "multi",
+    description: "多件商品打包优惠",
+    defaultNum: 0.9,        // 9 折
+    condition: 2            // 需要买 2 件
+  },
+  {
+    type: "EBAY_DAILY_DEAL",
+    name: "限时特价",
+    basePoints: 60,
+    affect: "price",
+    calculate: "multi",
+    description: "特定时间段内的折扣",
+    defaultNum: 0.6,        // 6 折
+    timeLimit: true
+  },
+  {
+    type: "EBAY_COUPON_CODE",
+    name: "优惠码",
+    basePoints: 40,
+    affect: "total_order",
+    calculate: "subtract",
+    description: "使用特定代码享受优惠",
+    defaultNum: 15,         // 减 15 元
+    payType: "积分"
   }
-): number {
-  switch (promotion.type) {
-    case "PINDUODUO_GROUP_BUYING":
-      if (!options?.peopleCount || options.peopleCount < promotion.require_people_num) {
-        return price // 人数不足，无法享受优惠
-      }
-      return price * promotion.num
+]
 
-    case "PINDUODUO_DIRECT_REDUCTION":
-      return price - promotion.num
+async function main() {
+  console.log('Start initializing promotion types...')
+  
+  for (const promotionType of promotionTypes) {
+    await prisma.promotionType.upsert({
+      where: { type: promotionType.type },
+      update: promotionType,
+      create: promotionType
+    })
+  }
+  
+  console.log('Promotion types initialized successfully!')
+}
 
-    case "TAOBAO_FULL_MINUS":
-      if (!options?.totalOrder || options.totalOrder < promotion.condition) {
-        return price // 未满足条件，无法享受优惠
-      }
-      return price - promotion.num
-
-    case "TAOBAO_COUPON":
-      return price - promotion.num
-
-    case "AMAZON_PERCENTAGE_OFF":
-      return price * promotion.num
-
-    case "AMAZON_BUNDLE_SALE":
+main()
+  .catch((e) => {
+    console.error(e)
+    process.exit(1)
+  })
+  .finally(async () => {
+    await prisma.$disconnect()
+  }) ase "AMAZON_BUNDLE_SALE":
       if (!options?.itemCount || options.itemCount < promotion.condition) {
         return price // 商品数量不足，无法享受优惠
       }
@@ -522,3 +522,85 @@ quantity: 购买数量
 couponId: 关联到优惠券模板
 status: "completed"
 这样我们就能完整地记录用户的购买历史和实际支付的价格。
+
+### 优惠券购买流程详细设计
+
+#### 数据库结构
+```prisma
+model CouponTemplate {
+  id               String          @id
+  merchantId       String          
+  name            String          
+  totalQuantity   Int             
+  remainingQuantity Int           
+  status          String          
+  sellPrice       Int             // 玩家购买价格（积分）
+  issuedCoupons   IssuedCoupon[]  
+}
+
+model IssuedCoupon {
+  id          String         @id
+  templateId  String        
+  userId      String        
+  passCode    String        @unique
+  qrCode      String?       
+  buyPrice    Int           // 记录购买时的价格
+  status      String        @default("unused")
+  usedAt      DateTime?     
+  createdAt   DateTime      @default(now())
+}
+
+model Transaction {
+  id          String   @id
+  userId      String   
+  type        String   // "buy_coupon"
+  amount      Int      // 消费的积分数量
+  couponId    String?  // 关联的优惠券模板
+  status      String   // "completed"
+}
+```
+
+#### 购买（redeem）流程
+1. 前置检查：
+   - 玩家积分余额是否足够（>= coupon.sellPrice）
+   - 优惠券是否还有库存（remainingQuantity > 0）
+   - 优惠券是否在有效期内
+   - 玩家是否已经拥有该优惠券
+
+2. 执行购买（使用数据库事务）：
+   - 创建 IssuedCoupon 记录：
+     * 生成唯一的 passCode（8 位随机字母数字）
+     * 生成对应的 QR Code
+     * 记录购买价格 buyPrice
+     * 设置初始状态为 "unused"
+   - 更新 CouponTemplate 的 remainingQuantity（-1）
+   - 扣除玩家积分
+   - 创建交易记录（Transaction）
+
+3. 购买成功后：
+   - 重定向到优惠券展示页面
+   - 显示 QR Code 和 passCode
+   - 提供优惠券使用说明
+
+#### 安全性保障
+- 使用数据库事务确保数据一致性
+- 防止优惠券超卖
+- 防止重复购买
+- 确保积分余额充足
+
+
+new coupon:
+{
+  name: string            // 来自表单输入
+  description: string     // 来自表单输入
+  categoryId: string      // 来自表单选择
+  type: string           // 来自表单选择的优惠券类型
+  settings: object       // 根据选择的 type 自动生成
+  totalQuantity: number  // 来自表单输入
+  startDate: Date       // 来自表单输入
+  endDate: Date         // 来自表单输入
+  publishPrice: number  // 自动从选择的 type 的 basePoints 获取
+  sellPrice: number     // 固定为 30
+  discountType: string  // 根据 settings.calculate 自动判断
+  discountValue: number // 根据 settings.num 自动计算
+}
