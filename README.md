@@ -1,7 +1,13 @@
-# Basic Central App
+# Introduction
+
+There are two branched you can use:
+main: Business Coupon System for business to issue coupons and player to redeem coupons and write off it.
+basic: Basic Authentication System, you can use it as a basic authentication system to develop your own application.
+
+
+## Business Coupon System
 
 A central application for managing coupons between merchants and players.
-
 ## Prerequisites
 
 - Node.js 18+ and pnpm
