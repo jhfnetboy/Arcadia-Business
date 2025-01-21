@@ -8,9 +8,10 @@ There are two branched you can use:
 **nextauth**:Basic Authentication System using NextAuthjs, you can use it as a basic authentication system to develop your own application.
 
 
-## Business Coupon System
+## Arcadia Business System
 
 A central application for managing coupons between merchants and players.
+Will add more features to this system.
 ## Prerequisites
 
 - Node.js 18+ and pnpm
