@@ -9,6 +9,7 @@ export default async function NewPlayerPage() {
   // If not signed in, redirect to sign in page
   if (!session?.user?.email) {
     redirect("/auth/signin?callbackUrl=/player/new")
+    return
   }
 
   // Get user
@@ -19,7 +20,7 @@ export default async function NewPlayerPage() {
 
   // If no user found, redirect to homepage
   if (!user) {
-    redirect("/")
+    throw new Error("User not found")
   }
 
   // If player profile exists, redirect to player dashboard
@@ -30,10 +31,24 @@ export default async function NewPlayerPage() {
   async function createPlayerProfile(formData: FormData) {
     "use server"
 
+    const session = await auth()
+    if (!session?.user?.email) {
+      throw new Error("You must be logged in to create a player profile")
+    }
+
+    // 重新获取用户信息
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    })
+
+    if (!user) {
+      throw new Error("User not found")
+    }
+
     const walletAddress = formData.get("walletAddress") as string
 
     if (!walletAddress) {
-      throw new Error("Please provide a wallet address")
+      throw new Error("Wallet address is required")
     }
 
     // Check if wallet address is already in use

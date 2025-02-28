@@ -47,6 +47,9 @@ export default async function MerchantTransactionsPage() {
         { type: "recharge_points" }     // 充值积分
       ]
     },
+    include: {
+      coupon: true
+    },
     orderBy: {
       createdAt: 'desc'
     }
@@ -73,9 +76,9 @@ export default async function MerchantTransactionsPage() {
               <div className="font-medium">
                 {transaction.type === "coupon_creation" ? (
                   <>
-                    Created Coupon: {transaction.coupon?.name}
+                    Created Coupon (ID: {transaction.couponId || "N/A"})
                     <div className="text-sm text-muted-foreground">
-                      Quantity: {transaction.coupon?.totalQuantity}
+                      Quantity: {transaction.quantity}
                     </div>
                   </>
                 ) : (

@@ -48,7 +48,7 @@ export default async function PlayerDashboard() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">My Coupons</h1>
           <p className="text-muted-foreground">
-            Points Balance: {user.playerProfile.points_balance}
+            Points Balance: {user.playerProfile.pointsBalance}
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">

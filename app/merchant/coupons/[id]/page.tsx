@@ -6,10 +6,54 @@ import { Button } from "@/components/ui/button";
 import { notFound } from "next/navigation";
 import type { NextPage } from "next";
 
+// 定义基础类型
+interface IssuedCoupon {
+  id: string;
+  status: string;
+  passCode: string;
+  usedAt: Date | null;
+  user: {
+    name: string | null;
+  };
+}
+
+// 修改基础 Transaction 接口
+interface Transaction {
+  id: string;
+  type: string;
+  couponId: string | null;
+  quantity: number;
+  // 移除 couponTemplate，因为我们使用 coupon
+}
+
 // Define the type for params explicitly
 interface CouponDetailPageProps {
   params: Promise<{ id: string }>; // Use Promise to match async behavior
   searchParams: Promise<{ error?: string }>;
+}
+
+// 定义 IssuedCouponWithUser 类型
+interface IssuedCouponWithUser extends IssuedCoupon {
+  user: {
+    name: string | null
+  }
+}
+
+// 修改 TransactionWithTemplate 接口
+interface TransactionWithTemplate extends Omit<Transaction, 'couponTemplate'> {
+  coupon: {
+    id: string;
+    name: string;
+    status: string;
+    createdAt: Date;
+    promotionType: string;
+    merchantId: string;
+    categoryId: string;
+    description: string | null;
+    discountType: string;
+    sellPrice: number;
+    // ... 其他需要的字段
+  } | null;
 }
 
 const CouponDetailPage: NextPage<CouponDetailPageProps> = async ({
@@ -56,9 +100,25 @@ const CouponDetailPage: NextPage<CouponDetailPageProps> = async ({
 
   // Group coupons by status
   const coupons = {
-    unused: coupon.issuedCoupons.filter((c) => c.status === "unused"),
-    used: coupon.issuedCoupons.filter((c) => c.status === "used"),
+    unused: coupon.issuedCoupons.filter((c: IssuedCouponWithUser) => c.status === "unused"),
+    used: coupon.issuedCoupons.filter((c: IssuedCouponWithUser) => c.status === "used"),
   };
+
+  const transactions = await prisma.transaction.findMany({
+    where: {
+      userId: user.id,
+      OR: [
+        { type: "coupon_creation" },
+        { type: "recharge_points" }
+      ]
+    },
+    include: {
+      coupon: true,
+    },
+    orderBy: {
+      createdAt: 'desc'
+    }
+  });
 
   return (
     <div className="flex flex-col gap-6 container mx-auto px-4 sm:px-6">
@@ -96,7 +156,7 @@ const CouponDetailPage: NextPage<CouponDetailPageProps> = async ({
           <h2 className="text-lg font-semibold">Used Coupons</h2>
         </div>
         <div className="divide-y">
-          {coupons.used.map((coupon) => (
+          {coupons.used.map((coupon: IssuedCouponWithUser) => (
             <div key={coupon.id} className="p-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <div>
@@ -118,6 +178,33 @@ const CouponDetailPage: NextPage<CouponDetailPageProps> = async ({
           {coupons.used.length === 0 && (
             <div className="p-4 text-center text-muted-foreground">
               No used coupons yet
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="rounded-lg border">
+        <div className="p-4 border-b">
+          <h2 className="text-lg font-semibold">Transactions</h2>
+        </div>
+        <div className="divide-y">
+          {transactions.map((transaction: TransactionWithTemplate) => (
+            <div key={transaction.id} className="p-4">
+              {transaction.type === "coupon_creation" ? (
+                <>
+                  Created Coupon (ID: {transaction.coupon?.id || "N/A"})
+                  <div className="text-sm text-muted-foreground">
+                    Quantity: {transaction.quantity}
+                  </div>
+                </>
+              ) : (
+                "Points Recharge"
+              )}
+            </div>
+          ))}
+          {transactions.length === 0 && (
+            <div className="p-4 text-center text-muted-foreground">
+              No transactions yet
             </div>
           )}
         </div>
