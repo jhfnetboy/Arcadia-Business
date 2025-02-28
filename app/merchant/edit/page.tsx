@@ -17,7 +17,8 @@ export default async function EditMerchantPage() {
   })
 
   if (!user) {
-    redirect("/")
+    redirect("/auth/signin")
+    return
   }
 
   if (!user.merchantProfile) {
@@ -26,6 +27,22 @@ export default async function EditMerchantPage() {
 
   async function updateMerchantProfile(formData: FormData) {
     "use server"
+    
+    const session = await auth()
+    
+    if (!session?.user?.email) {
+      redirect("/auth/signin?callbackUrl=/merchant/edit")
+      return
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    })
+
+    if (!user) {
+      redirect("/auth/signin")
+      return
+    }
     
     const businessName = formData.get("businessName") as string
     const description = formData.get("description") as string

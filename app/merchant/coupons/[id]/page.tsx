@@ -1,49 +1,64 @@
-import { auth } from "@/auth"
-import { redirect } from "next/navigation"
-import { prisma } from "@/lib/prisma"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { notFound } from "next/navigation"
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
+import { prisma } from "@/lib/prisma";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { notFound } from "next/navigation";
+import type { NextPage } from "next";
 
-export default async function CouponDetailPage({ params }: { params: { id: string } }) {
-  const session = await auth()
+// Define the type for params explicitly
+interface CouponDetailPageProps {
+  params: Promise<{ id: string }>; // Use Promise to match async behavior
+  searchParams: Promise<{ error?: string }>;
+}
+
+const CouponDetailPage: NextPage<CouponDetailPageProps> = async ({
+  params,
+  searchParams,
+}) => {
+  const resolvedParams = await params; // Resolve the Promise
+  const resolvedSearchParams = await searchParams; // Resolve the searchParams Promise
+  const { id } = resolvedParams;
+  const { error } = resolvedSearchParams; // Get the error if it exists
+
+  const session = await auth();
   if (!session?.user?.email) {
-    redirect(`/auth/signin?callbackUrl=/merchant/coupons/${params.id}`)
+    redirect(`/auth/signin?callbackUrl=/merchant/coupons/${id}`);
   }
 
   const user = await prisma.user.findUnique({
     where: { email: session.user.email },
-    include: { merchantProfile: true }
-  })
+    include: { merchantProfile: true },
+  });
 
   if (!user?.merchantProfile) {
-    redirect("/merchant/new")
+    redirect("/merchant/new");
   }
 
   const coupon = await prisma.couponTemplate.findUnique({
-    where: { 
-      id: params.id,
-      merchantId: user.merchantProfile.id
+    where: {
+      id: id,
+      merchantId: user.merchantProfile.id,
     },
     include: {
       category: true,
       issuedCoupons: {
         include: {
-          user: true
-        }
-      }
-    }
-  })
+          user: true,
+        },
+      },
+    },
+  });
 
   if (!coupon) {
-    notFound()
+    notFound();
   }
 
   // Group coupons by status
   const coupons = {
-    unused: coupon.issuedCoupons.filter(c => c.status === "unused"),
-    used: coupon.issuedCoupons.filter(c => c.status === "used")
-  }
+    unused: coupon.issuedCoupons.filter((c) => c.status === "unused"),
+    used: coupon.issuedCoupons.filter((c) => c.status === "used"),
+  };
 
   return (
     <div className="flex flex-col gap-6 container mx-auto px-4 sm:px-6">
@@ -86,10 +101,9 @@ export default async function CouponDetailPage({ params }: { params: { id: strin
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <div>
                   <div className="font-medium">
-                    {coupon.user.name ? 
-                      `${coupon.user.name.slice(0, 3)}${"*".repeat(coupon.user.name.length - 3)}` : 
-                      "Anonymous"
-                    }
+                    {coupon.user.name
+                      ? `${coupon.user.name.slice(0, 3)}${"*".repeat(coupon.user.name.length - 3)}`
+                      : "Anonymous"}
                   </div>
                   <div className="text-sm text-muted-foreground">
                     Pass Code: {`${"*".repeat(4)}${coupon.passCode.slice(-4)}`}
@@ -109,5 +123,7 @@ export default async function CouponDetailPage({ params }: { params: { id: strin
         </div>
       </div>
     </div>
-  )
-} 
+  );
+};
+
+export default CouponDetailPage;

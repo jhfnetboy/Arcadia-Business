@@ -50,8 +50,9 @@ export default async function NewUserPage() {
       // Redirect to homepage after user creation
       redirect("/")
     } catch (error) {
-      // If there's a unique constraint error, user was created in another tab/window
-      if (error.code === 'P2002') {
+      // 使用类型断言
+      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+            if (error instanceof Error && (error as any).code === 'P2002') {
         redirect("/")
       }
       throw error

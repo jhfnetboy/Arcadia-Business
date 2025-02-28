@@ -31,6 +31,22 @@ export default async function NewMerchantPage() {
   async function createMerchantProfile(formData: FormData) {
     "use server"
 
+    const session = await auth()
+    
+    if (!session?.user?.email) {
+      redirect("/auth/signin?callbackUrl=/merchant/new")
+      return
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    })
+
+    if (!user) {
+      redirect("/auth/signin")
+      return
+    }
+
     const businessName = formData.get("businessName") as string
     const description = formData.get("description") as string
     const address = formData.get("address") as string
