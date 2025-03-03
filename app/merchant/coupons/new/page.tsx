@@ -1,8 +1,8 @@
 import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 // import { prisma } from "@/lib/prisma"
-import { Prisma } from "@prisma/client"
 import { PrismaClient } from "@prisma/client";
+import { Decimal } from "@prisma/client/runtime/library";
 import NewCouponForm from "@/components/new-coupon-form"
 const prisma = new PrismaClient();
 
@@ -219,7 +219,7 @@ export default async function NewCouponPage() {
             payNum: promotionType.payNum
           },
           discountType,
-          discountValue: new Prisma.Decimal(discountValue),
+          discountValue: new Decimal(discountValue),
           publishPrice: publishCost,
           sellPrice: 30, // Default value
           totalQuantity,
