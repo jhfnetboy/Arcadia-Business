@@ -71,6 +71,19 @@ pnpm prisma db push
 pnpm prisma migrate dev --name init
 ```
 
+
+4. Supbase push
+ supabase init
+ supabase link
+ supabase migration new init
+ export your sql modification
+ supabase db push
+      supabase db push <path_to_your_sql_file>
+           supabase db push --debug
+ supabase db status
+
+ ![](https://raw.githubusercontent.com/jhfnetboy/MarkDownImg/main/img/202503031207254.png)
+
 ### 3. 测试
 
 1. 运行测试：
