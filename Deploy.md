@@ -88,6 +88,10 @@ pnpm prisma migrate dev --name init
 
 1. 运行测试：
 ```bash
+pnpm add -g jest
+
+pnpm add --dev jest-environment-jsdom
+
 pnpm test
 ```
 
