@@ -48,6 +48,29 @@ const storage = createStorage({
     : memoryDriver(),
 })
 
+declare module "next-auth" {
+  interface Session {
+    accessToken?: string
+    user: {
+      isNewUser?: boolean
+      name?: string | null
+      email?: string | null
+      image?: string | null
+    }
+  }
+
+  interface User {
+    isNewUser?: boolean
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    accessToken?: string
+    isNewUser?: boolean
+  }
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   debug: !!process.env.AUTH_DEBUG,
   theme: { logo: "https://authjs.dev/img/logo-sm.png" },
@@ -154,15 +177,3 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   
   // experimental: { enableWebAuthn: true },
 })
-
-declare module "next-auth" {
-  interface Session {
-    accessToken?: string
-  }
-}
-
-declare module "next-auth/jwt" {
-  interface JWT {
-    accessToken?: string
-  }
-}

@@ -1,3 +1,4 @@
+import type { NextPage } from "next"
 import { notFound } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
@@ -236,8 +237,17 @@ const PROMOTION_DETAILS = {
   }
 }
 
-export default function PromotionTypePage({ params }: { params: { type: string } }) {
-  const details = PROMOTION_DETAILS[params.type as keyof typeof PROMOTION_DETAILS]
+interface PromotionTypePageProps {
+  params: Promise<{ type: string }>
+}
+
+const PromotionTypePage: NextPage<PromotionTypePageProps> = async ({
+  params,
+}) => {
+  const resolvedParams = await params
+  const { type } = resolvedParams
+
+  const details = PROMOTION_DETAILS[type as keyof typeof PROMOTION_DETAILS]
   
   if (!details) {
     notFound()
@@ -295,4 +305,6 @@ export default function PromotionTypePage({ params }: { params: { type: string }
       </Card>
     </div>
   )
-} 
+}
+
+export default PromotionTypePage 

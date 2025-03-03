@@ -5,10 +5,21 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import WriteOffForm from "@/components/write-off-form"
 
+// 首先定义一个 CouponType 接口
+interface CouponType {
+  totalQuantity: number
+  remainingQuantity: number
+  status: string
+  issuedCoupons: {
+    status: string
+  }[]
+}
+
 export default async function MerchantDashboard() {
   const session = await auth()
   if (!session?.user?.email) {
     redirect("/auth/signin?callbackUrl=/merchant")
+    return
   }
 
   // Get user with merchant profile
@@ -29,7 +40,7 @@ export default async function MerchantDashboard() {
 
   // If no user found, redirect to homepage
   if (!user) {
-    redirect("/")
+    throw new Error("User is not logged in. Please log in first.")
   }
 
   // If no merchant profile, redirect to new merchant page
@@ -41,20 +52,48 @@ export default async function MerchantDashboard() {
     pointsBalance: user.merchantProfile.pointsBalance,
     totalCoupons: {
       types: user.merchantProfile.coupons.length,
-      quantity: user.merchantProfile.coupons.reduce((acc, t) => acc + t.totalQuantity, 0)
+      quantity: user.merchantProfile.coupons.reduce(
+        (acc: number, t: CouponType) => acc + t.totalQuantity, 
+        0
+      )
     },
     activeCoupons: {
-      types: user.merchantProfile.coupons.filter(t => t.status === 'active').length,
+      types: user.merchantProfile.coupons.filter(
+        (t: CouponType) => t.status === 'active'
+      ).length,
       quantity: user.merchantProfile.coupons
-        .filter(t => t.status === 'active')
-        .reduce((acc, t) => acc + t.remainingQuantity, 0)
+        .filter((t: CouponType) => t.status === 'active')
+        .reduce(
+          (acc: number, t: CouponType) => acc + t.remainingQuantity, 
+          0
+        )
     },
-    redeemedCoupons: user.merchantProfile.coupons.reduce((acc, t) => 
-      acc + t.issuedCoupons.filter(ic => ic.status === 'used').length, 0)
+    redeemedCoupons: user.merchantProfile.coupons.reduce(
+      (acc: number, t: CouponType) => 
+        acc + t.issuedCoupons.filter(
+          (ic: { status: string }) => ic.status === 'used'
+        ).length, 
+      0
+    )
   }
 
   async function checkCoupon(formData: FormData) {
     "use server"
+    
+    const session = await auth()
+    if (!session?.user?.email) {
+      throw new Error("You must be logged in to check coupons")
+    }
+
+    // 重新获取用户信息
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      include: { merchantProfile: true }
+    })
+
+    if (!user || !user.merchantProfile) {
+      throw new Error("Merchant profile not found")
+    }
     
     const passcode = formData.get("passcode")
     if (!passcode || typeof passcode !== "string") {
@@ -77,7 +116,8 @@ export default async function MerchantDashboard() {
       throw new Error("Coupon not found. Please check the code and try again")
     }
 
-    if (coupon.template.merchantId !== user.merchantProfile.id) {
+    const merchantProfileId = user.merchantProfile.id
+    if (coupon.template.merchantId !== merchantProfileId) {
       throw new Error("This coupon was not issued by your store")
     }
 
@@ -96,12 +136,12 @@ export default async function MerchantDashboard() {
     return {
       id: coupon.id,
       name: coupon.template.name,
-      description: coupon.template.description,
+      description: coupon.template.description || "",
       playerName: coupon.user.name || "",
       playerEmail: coupon.user.email || "",
       promotionType: coupon.template.promotionType,
       discountType: coupon.template.discountType,
-      discountValue: Number(coupon.template.discountValue), // Convert Decimal to Number
+      discountValue: Number(coupon.template.discountValue),
       status: coupon.status,
       createdAt: coupon.createdAt.toISOString(),
       expiresAt: coupon.template.endDate.toISOString(),
@@ -110,6 +150,21 @@ export default async function MerchantDashboard() {
 
   async function redeemCoupon(id: string) {
     "use server"
+
+    const session = await auth()
+    if (!session?.user?.email) {
+      throw new Error("You must be logged in to redeem coupons")
+    }
+
+    // 重新获取用户信息
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      include: { merchantProfile: true }
+    })
+
+    if (!user || !user.merchantProfile) {
+      throw new Error("Merchant profile not found")
+    }
 
     const coupon = await prisma.issuedCoupon.findUnique({
       where: { id },
@@ -122,7 +177,8 @@ export default async function MerchantDashboard() {
       throw new Error("Coupon not found")
     }
 
-    if (coupon.template.merchantId !== user.merchantProfile.id) {
+    const merchantProfileId = user.merchantProfile.id
+    if (coupon.template.merchantId !== merchantProfileId) {
       throw new Error("This coupon was not issued by your store")
     }
 
@@ -145,6 +201,22 @@ export default async function MerchantDashboard() {
         usedAt: now
       },
     })
+  }
+
+  // 创建一个新的函数用于表单提交
+  async function handleCouponCheck(formData: FormData) {
+    "use server"
+    
+    try {
+      // 调用原来的 checkCoupon 函数获取优惠券信息
+      const couponDetails = await checkCoupon(formData)
+      // 这里可以添加处理逻辑，比如存储到服务器状态或重定向
+      // 但不返回任何值
+    } catch (error) {
+      // 处理错误
+      console.error("Error checking coupon:", error)
+    }
+    // 不返回任何值，符合 form action 的要求
   }
 
   return (
@@ -204,7 +276,7 @@ export default async function MerchantDashboard() {
           <h2 className="text-lg font-semibold">Verify Coupon</h2>
         </div>
         <div className="p-4">
-          <form action={checkCoupon} className="flex gap-2">
+          <form action={handleCouponCheck} className="flex gap-2">
             <input
               type="text"
               name="passcode"

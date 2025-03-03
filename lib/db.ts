@@ -1,4 +1,4 @@
-import prisma from "./prisma"
+import { prisma } from "./prisma"
 import type { User, MerchantProfile, CouponTemplate, IssuedCoupon } from "@prisma/client"
 
 export async function getUserById(id: string) {
@@ -18,12 +18,13 @@ export async function getMerchantProfile(userId: string) {
 
 export async function createMerchantProfile(
   userId: string,
-  data: Omit<MerchantProfile, "id" | "userId" | "createdAt" | "updatedAt" | "pointsBalance">
+  data: Omit<MerchantProfile, 'userId'> & { location: Record<string, any> | null }
 ) {
   return await prisma.merchantProfile.create({
     data: {
       ...data,
       userId,
+      location: data.location ?? undefined,
     },
   })
 }
@@ -53,46 +54,63 @@ export async function getIssuedCoupons(userId: string) {
 
 export async function createCouponTemplate(
   merchantId: string,
-  data: Omit<CouponTemplate, "id" | "merchantId" | "createdAt" | "remainingQuantity">
+  data: Omit<CouponTemplate, 'merchantId' | 'remainingQuantity'> & { settings: Record<string, any> | null }
 ) {
   return await prisma.couponTemplate.create({
     data: {
       ...data,
       merchantId,
       remainingQuantity: data.totalQuantity,
+      settings: data.settings ?? {},
     },
   })
 }
 
+// 修改类型定义
+interface IssueCouponData {
+  passCode: string
+  qrCode: string | null
+}
+
+// 修改创建优惠券的函数
 export async function issueCoupon(
   templateId: string,
   userId: string,
-  data: Pick<IssuedCoupon, "passCode" | "qrCode">
+  data: IssueCouponData
 ) {
-  // Start a transaction
   return await prisma.$transaction(async (tx) => {
-    // Get the template and check remaining quantity
+    // 获取优惠券模板
     const template = await tx.couponTemplate.findUnique({
-      where: { id: templateId },
+      where: { id: templateId }
     })
-    
-    if (!template || template.remainingQuantity <= 0) {
-      throw new Error("Coupon template not available")
+
+    if (!template) {
+      throw new Error("Coupon template not found")
     }
 
-    // Update template remaining quantity
+    // 检查剩余数量
+    if (template.remainingQuantity <= 0) {
+      throw new Error("No coupons remaining")
+    }
+
+    // 更新剩余数量
     await tx.couponTemplate.update({
       where: { id: templateId },
-      data: { remainingQuantity: template.remainingQuantity - 1 },
+      data: {
+        remainingQuantity: {
+          decrement: 1
+        }
+      }
     })
 
-    // Create issued coupon
+    // 创建已发行优惠券
     return await tx.issuedCoupon.create({
       data: {
+        ...data,
         templateId,
         userId,
-        ...data,
-      },
+        buyPrice: template.sellPrice, // 使用模板中的 sellPrice 作为 buyPrice
+      }
     })
   })
 }
@@ -158,4 +176,22 @@ export async function useRechargeCode(code: string) {
 // Helper function to generate recharge code
 function generateRechargeCode() {
   return Math.random().toString(36).substring(2, 15).toUpperCase()
+}
+
+export async function createIssuedCoupon(
+  userId: string,
+  templateId: string,
+  passCode: string,
+  qrCode: string | null,
+  buyPrice: number
+) {
+  return await prisma.issuedCoupon.create({
+    data: {
+      passCode,
+      qrCode,
+      templateId,
+      userId,
+      buyPrice,
+    },
+  })
 } 

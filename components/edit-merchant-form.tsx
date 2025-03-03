@@ -26,7 +26,7 @@ export default function EditMerchantForm({ merchant, onSubmit }: EditMerchantFor
       return { lat: 18.7883, lng: 98.9853 } // Default to Chiang Mai if parse fails
     }
   })
-  const [address, setAddress] = useState(merchant.address)
+  const [address, setAddress] = useState(merchant.address ?? '')
   const [images, setImages] = useState<string[]>(merchant.images)
   const [geocoder, setGeocoder] = useState<google.maps.Geocoder | null>(null)
 
@@ -120,7 +120,7 @@ export default function EditMerchantForm({ merchant, onSubmit }: EditMerchantFor
             <Input 
               id="address" 
               name="address" 
-              value={address}
+              value={address || ''}
               onChange={handleAddressChange}
               required 
             />

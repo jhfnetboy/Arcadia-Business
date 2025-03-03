@@ -1,6 +1,6 @@
 # Introduction
 
-There are two branched you can use:
+There are two branches you can use:
 **main**: Business Coupon System for business to issue coupons and player to redeem coupons and write off it. It will be updated frequently.
 
 **basic**: Initial version of the business coupon system, it is a basic authentication system, you can use it as a basic authentication system to develop your own application.
@@ -8,9 +8,10 @@ There are two branched you can use:
 **nextauth**:Basic Authentication System using NextAuthjs, you can use it as a basic authentication system to develop your own application.
 
 
-## Business Coupon System
+## Arcadia Business System
 
 A central application for managing coupons between merchants and players.
+Will add more features to this system.
 ## Prerequisites
 
 - Node.js 18+ and pnpm

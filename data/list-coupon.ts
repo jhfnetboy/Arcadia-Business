@@ -23,9 +23,10 @@ async function main() {
     console.log(`ID: ${coupon.id}`)
     console.log(`Merchant: ${coupon.merchant.businessName}`)
     console.log(`Category: ${coupon.category.name}`)
+    console.log(`Name: ${coupon.name}`)
     console.log(`Description: ${coupon.description}`)
     console.log(`Status: ${coupon.status}`)
-    console.log(`Points Price: ${coupon.pointsPrice}`)
+    console.log(`Points Price: ${coupon.sellPrice}`)
     console.log(`Quantity: ${coupon.remainingQuantity} / ${coupon.totalQuantity}`)
     console.log(`Valid: ${coupon.startDate.toLocaleDateString()} - ${coupon.endDate.toLocaleDateString()}`)
     

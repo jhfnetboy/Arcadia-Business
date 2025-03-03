@@ -6,6 +6,7 @@ import Link from "next/link"
 import QRCode from "qrcode"
 import type { Prisma } from "@prisma/client"
 import { cn } from "@/lib/utils"
+import type{ NextPage } from "next"
 
 type UserWithRelations = Prisma.UserGetPayload<{
   include: {
@@ -18,15 +19,28 @@ type UserWithRelations = Prisma.UserGetPayload<{
   }
 }>
 
-export default async function ShowCouponPage({ params }: { params: { id: string } }) {
+interface CouponDetailPageProps {
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ error?: string }>
+}
+
+const CouponDetailPage: NextPage<CouponDetailPageProps> = async ({
+  params,
+  searchParams,
+}) => {
+  const resolvedParams = await params
+  const resolvedSearchParams = await searchParams
+  const { id } = resolvedParams
+  const { error } = resolvedSearchParams
+
   const session = await auth()
   
   if (!session?.user?.email) {
-    redirect(`/auth/signin?callbackUrl=/player/coupons/${params.id}/show`)
+    redirect(`/auth/signin?callbackUrl=/player/coupons/${id}`)
   }
 
   const issuedCoupon = await prisma.issuedCoupon.findUnique({
-    where: { id: params.id },
+    where: { id: id },
     include: {
       template: true,
       user: {
@@ -101,4 +115,6 @@ export default async function ShowCouponPage({ params }: { params: { id: string 
       </div>
     </div>
   )
-} 
+}
+
+export default CouponDetailPage 

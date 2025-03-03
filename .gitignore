@@ -1,3 +1,4 @@
+.vscode
 .DS_Store
 public/uploads/*
 node_modules/
@@ -20,3 +21,4 @@ next-env.d.ts
 .env*.local%   
 .env.local
 .env  
+.env.bak
