@@ -1,10 +1,9 @@
 import { auth } from "@/auth"
 import { redirect } from "next/navigation"
-// import { prisma } from "@/lib/prisma"
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma"
 import { Decimal } from "@prisma/client/runtime/library";
+// import type { Prisma } from "@prisma/client"
 import NewCouponForm from "@/components/new-coupon-form"
-const prisma = new PrismaClient();
 
 // Helper function to format date for display
 function formatDate(date: Date): string {
