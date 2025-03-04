@@ -5,16 +5,11 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { notFound } from "next/navigation";
 import type { NextPage } from "next";
+import type { IssuedCoupon, User } from "@prisma/client";
 
-// 定义基础类型
-interface IssuedCoupon {
-  id: string;
-  status: string;
-  passCode: string;
-  usedAt: Date | null;
-  user: {
-    name: string | null;
-  };
+// Define the interface for the issued coupon with user
+interface IssuedCouponWithUserDetails extends IssuedCoupon {
+  user: User;
 }
 
 // 修改基础 Transaction 接口
@@ -30,13 +25,6 @@ interface Transaction {
 interface CouponDetailPageProps {
   params: Promise<{ id: string }>; // Use Promise to match async behavior
   searchParams: Promise<{ error?: string }>;
-}
-
-// 定义 IssuedCouponWithUser 类型
-interface IssuedCouponWithUser extends IssuedCoupon {
-  user: {
-    name: string | null
-  }
 }
 
 // 修改 TransactionWithTemplate 接口
@@ -100,8 +88,8 @@ const CouponDetailPage: NextPage<CouponDetailPageProps> = async ({
 
   // Group coupons by status
   const coupons = {
-    unused: coupon.issuedCoupons.filter((c: IssuedCouponWithUser) => c.status === "unused"),
-    used: coupon.issuedCoupons.filter((c: IssuedCouponWithUser) => c.status === "used"),
+    unused: coupon.issuedCoupons.filter((c: IssuedCouponWithUserDetails) => c.status === "unused"),
+    used: coupon.issuedCoupons.filter((c: IssuedCouponWithUserDetails) => c.status === "used"),
   };
 
   const transactions = await prisma.transaction.findMany({
@@ -156,7 +144,7 @@ const CouponDetailPage: NextPage<CouponDetailPageProps> = async ({
           <h2 className="text-lg font-semibold">Used Coupons</h2>
         </div>
         <div className="divide-y">
-          {coupons.used.map((coupon: IssuedCouponWithUser) => (
+          {coupons.used.map((coupon: IssuedCouponWithUserDetails) => (
             <div key={coupon.id} className="p-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <div>

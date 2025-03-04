@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import type { CouponTemplate, IssuedCoupon, User } from "@prisma/client"
 
 // Helper function to format discount display
 function formatDiscount(type: string, value: number): string {
@@ -51,8 +52,8 @@ export default async function UsedCouponsPage() {
   }
 
   // Flatten the coupons array to get all used coupons
-  const usedCoupons = user.merchantProfile.coupons.flatMap(template => 
-    template.issuedCoupons.map(coupon => ({
+  const usedCoupons = user.merchantProfile.coupons.flatMap((template: CouponTemplate & { issuedCoupons: (IssuedCoupon & { user: User, template: CouponTemplate })[] }) => 
+    template.issuedCoupons.map((coupon: IssuedCoupon & { user: User, template: CouponTemplate }) => ({
       id: coupon.id,
       templateId: template.id,
       templateName: template.name,
@@ -86,7 +87,16 @@ export default async function UsedCouponsPage() {
             </tr>
           </thead>
           <tbody>
-            {usedCoupons.map((coupon) => (
+            {usedCoupons.map((coupon: {
+              id: string;
+              templateId: string;
+              templateName: string;
+              userName: string;
+              passCode: string;
+              usedAt: Date | null;
+              discountType: string;
+              discountValue: number;
+            }) => (
               <tr key={coupon.id} className="border-b">
                 <td className="p-4">{coupon.templateName}</td>
                 <td className="p-4">{coupon.userName}</td>

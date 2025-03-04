@@ -3,6 +3,13 @@ import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import type { CouponTemplate, CouponCategory, IssuedCoupon } from "@prisma/client"
+
+// 定义包含关系的类型
+interface CouponTemplateWithRelations extends CouponTemplate {
+  category: CouponCategory;
+  issuedCoupons: IssuedCoupon[];
+}
 
 // Helper function to format discount display
 function formatDiscount(type: string, value: number): string {
@@ -14,7 +21,9 @@ function formatDiscount(type: string, value: number): string {
     const normalizedValue = Math.max(0, Math.min(100, roundedValue))
     return `${normalizedValue}% off`
   }
-  return `${roundedValue} off`
+ 
+  // For fixed amount discount
+  return `$${roundedValue} off`
 }
 
 export default async function MerchantCouponsPage() {
@@ -62,7 +71,7 @@ export default async function MerchantCouponsPage() {
       </div>
 
       <div className="grid gap-4">
-        {coupons.map((coupon) => (
+        {coupons.map((coupon: CouponTemplateWithRelations) => (
           <div key={coupon.id} className="rounded-lg border p-6">
             <div className="flex items-start justify-between">
               <div>
