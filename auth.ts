@@ -168,7 +168,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async redirect({ url, baseUrl }) {
       // Always do user verification first
       if (url.startsWith(baseUrl)) {
-        if (url.includes('/auth/signin')) return url
+        if (url.includes('/auth/signin') || url.includes('/town')) return url
         return `${baseUrl}/auth/verify`
       }
       return baseUrl

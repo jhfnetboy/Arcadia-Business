@@ -10,8 +10,7 @@ export default async function TownPage() {
   // If not signed in, show login page
   if (!session?.user?.email) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-cover bg-center" 
-           style={{ backgroundImage: "url('/images/town-background.jpg')" }}>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-blue-900 to-black">
         <div className="bg-black/50 p-8 rounded-lg backdrop-blur-sm">
           <h1 className="text-3xl font-bold text-white mb-6">Welcome to Town</h1>
           <p className="text-white mb-8">Please sign in to continue</p>
@@ -28,8 +27,7 @@ export default async function TownPage() {
 
   // If signed in, show the town page with buttons
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-cover bg-center"
-         style={{ backgroundImage: "url('/images/town-background.jpg')" }}>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-blue-900 to-black">
       <div className="bg-black/50 p-8 rounded-lg backdrop-blur-sm">
         <div className="flex items-center mb-6">
           {session.user.image && (

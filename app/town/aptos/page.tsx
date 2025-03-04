@@ -12,8 +12,7 @@ export default async function AptosPage() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-cover bg-center"
-         style={{ backgroundImage: "url('/images/aptos-background.jpg')" }}>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-purple-600 to-gray-900">
       <div className="bg-black/50 p-8 rounded-lg backdrop-blur-sm">
         <h1 className="text-3xl font-bold text-white mb-2">Aptos</h1>
         <p className="text-white mb-8">Welcome to the Aptos network</p>

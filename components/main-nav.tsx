@@ -52,6 +52,7 @@ export function MainNav() {
         <SelectContent>
           <SelectItem value="player">Player Portal</SelectItem>
           <SelectItem value="merchant">Merchant Portal</SelectItem>
+          <SelectItem value="town">Town</SelectItem>
         </SelectContent>
       </Select>
     </div>
