@@ -74,7 +74,18 @@ export default async function NewCouponPage() {
   console.log('Raw promotion types from DB:', JSON.stringify(promotionTypes, null, 2))
 
   // Transform the data to match the component's expected format
-  const formattedPromotionTypes = promotionTypes.map(pt => {
+  const formattedPromotionTypes = promotionTypes.map((pt: {
+    type: string;
+    name: string;
+    basePoints: number;
+    affect: string;
+    calculate: string;
+    description: string;
+    defaultNum: number | null;
+    requirePeopleNum: number | null;
+    condition: number | null;
+    payType: string | null;
+  }) => {
     // First log the raw data we're working with
     console.log('Raw data for type:', pt.type, JSON.stringify({
       basePoints: pt.basePoints,
