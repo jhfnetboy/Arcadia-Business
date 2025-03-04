@@ -2,7 +2,7 @@ import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import Link from "next/link"
-import { Prisma } from "@prisma/client"
+import type { Prisma } from "@prisma/client"
 
 export default async function HomePage() {
   const session = await auth()
@@ -15,7 +15,7 @@ export default async function HomePage() {
           <h1 className="text-3xl font-bold">Welcome to Arcadia Smart Business</h1>
           <h2 className="text-muted-foreground">Get New Customers by Web3</h2>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-3">
           <div className="rounded-lg border p-6">
             <h2 className="text-xl font-semibold">For Merchants</h2>
             <p className="mt-2 text-muted-foreground">
@@ -38,6 +38,18 @@ export default async function HomePage() {
               className="mt-4 inline-block rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
             >
               Get Started
+            </Link>
+          </div>
+          <div className="rounded-lg border p-6">
+            <h2 className="text-xl font-semibold">Visit Town</h2>
+            <p className="mt-2 text-muted-foreground">
+              Explore blockchain networks including Ethereum and Aptos.
+            </p>
+            <Link 
+              href="/town"
+              className="mt-4 inline-block rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+            >
+              Visit Town
             </Link>
           </div>
         </div>
@@ -76,7 +88,7 @@ export default async function HomePage() {
         <p className="text-muted-foreground">Get started with Arcadia - Your Gateway to Smart Business</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-3">
         {/* Merchant Section */}
         <Link 
           href={user.merchantProfile ? "/merchant" : "/merchant/new"}
@@ -86,20 +98,20 @@ export default async function HomePage() {
           {user.merchantProfile ? (
             <>
               <p className="mt-2 text-muted-foreground">
-                Business: {user.merchantProfile.businessName}
+                Manage your business, create promotions, and track results.
               </p>
-              <p className="text-sm text-muted-foreground">
-                Points Balance: {user.merchantProfile.pointsBalance} points
-              </p>
+              <div className="mt-4 text-sm font-medium text-primary">
+                Go to Merchant Dashboard
+              </div>
             </>
           ) : (
             <>
               <p className="mt-2 text-muted-foreground">
-                Get New Customers with Smart Promotions
+                Set up your merchant profile to start creating promotions.
               </p>
-              <p className="text-sm text-muted-foreground">
-                Register as a merchant to start issuing coupons and attracting customers.
-              </p>
+              <div className="mt-4 text-sm font-medium text-primary">
+                Create Merchant Profile
+              </div>
             </>
           )}
         </Link>
@@ -113,22 +125,36 @@ export default async function HomePage() {
           {user.playerProfile ? (
             <>
               <p className="mt-2 text-muted-foreground">
-                Points Balance: {user.playerProfile.pointsBalance} points
+                Browse promotions, use coupons, and earn rewards.
               </p>
-              <p className="text-sm text-muted-foreground">
-                Unused Coupons: {user.issuedCoupons.length}
-              </p>
+              <div className="mt-4 text-sm font-medium text-primary">
+                Go to Player Dashboard
+              </div>
             </>
           ) : (
             <>
               <p className="mt-2 text-muted-foreground">
-                Smart Business Starts Here
+                Set up your player profile to start using promotions.
               </p>
-              <p className="text-sm text-muted-foreground">
-                Register as a player to browse and redeem coupons using points.
-              </p>
+              <div className="mt-4 text-sm font-medium text-primary">
+                Create Player Profile
+              </div>
             </>
           )}
+        </Link>
+
+        {/* Town Section */}
+        <Link 
+          href="/town"
+          className="rounded-lg border p-6 transition-colors hover:bg-muted/50"
+        >
+          <h2 className="text-xl font-semibold">Town</h2>
+          <p className="mt-2 text-muted-foreground">
+            Explore blockchain networks including Ethereum and Aptos.
+          </p>
+          <div className="mt-4 text-sm font-medium text-primary">
+            Visit Town
+          </div>
         </Link>
       </div>
     </div>

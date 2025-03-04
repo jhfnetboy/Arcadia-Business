@@ -117,7 +117,7 @@ export default async function NewCouponPage() {
   })
 
   // Log final formatted data with explicit fields
-  console.log('All formatted promotion types:', JSON.stringify(formattedPromotionTypes.map(pt => ({
+  console.log('All formatted promotion types:', JSON.stringify(formattedPromotionTypes.map((pt: FormattedPromotionType) => ({
     type: pt.type,
     name: pt.name,
     basePoints: pt.basePoints
