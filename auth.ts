@@ -166,11 +166,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return session
     },
     async redirect({ url, baseUrl }) {
-      // Always do user verification first
-      if (url.startsWith(baseUrl)) {
-        if (url.includes('/auth/signin') || url.includes('/town')) return url
-        return `${baseUrl}/auth/verify`
-      }
+      // 如果URL以baseUrl开头，则允许重定向
+      if (url.startsWith(baseUrl)) return url
+      // 否则重定向到baseUrl
       return baseUrl
     }
   },
