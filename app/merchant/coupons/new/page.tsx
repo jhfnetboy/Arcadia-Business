@@ -1,7 +1,8 @@
 import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
-import { Decimal } from "@prisma/client/runtime/library";
+import { Prisma } from "@prisma/client"
+const { Decimal } = Prisma
 import NewCouponForm from "@/components/new-coupon-form"
 
 // Helper function to format date for display

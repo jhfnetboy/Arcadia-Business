@@ -2,10 +2,12 @@ import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import Link from "next/link"
+// import { PrismaClient } from "@prisma/client"
 import type { Prisma } from "@prisma/client"
 
 export default async function HomePage() {
   const session = await auth()
+  console.log("Session:", session)
   
   // If not signed in, show welcome page
   if (!session?.user?.email) {
@@ -57,6 +59,8 @@ export default async function HomePage() {
     )
   }
 
+  console.log("Attempting to find user with email:", session.user.email)
+
   // Get user with profiles and unused coupons
   const user = await prisma.user.findUnique({
     where: { email: session.user.email },
@@ -76,10 +80,13 @@ export default async function HomePage() {
   }>;
 
   if (!user) {
+    console.log("User not found")
     redirect("/auth/signin")
   }
 
   const username = session.user.name || user.email.split('@')[0]
+
+  console.log("Database URL:", process.env.DATABASE_URL); // 调试信息
 
   return (
     <div className="flex flex-col gap-6">

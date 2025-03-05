@@ -538,3 +538,39 @@ GitHub Actions CI/CD配置：添加了完整的CI/CD配置示例，包括测试�
 安全检查清单：提供了全面的安全检查清单，帮助确保应用程序的安全性。
 部署后验证清单：详细的部署后验证步骤，确保所有功能正常工作。
 现在文档已经非常完整，包含了从环境设置到部署验证的所有必要信息，同时提供了中英文双语版本，方便不同用户参考。
+
+
+DB test
+    psql postgresql://postgres:password@db.ihxwzyizrwluxbvrfcyj.supabase.co:5432/postgres
+
+    psql postgresql://postgres.ihxwzyizrwluxbvrfcyj:DC399EpjZ$Jfj$K@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres
+
+    
+    postgresql://postgres.tbumaqkivvwqmyfuwqho:Epn*.aem*8$FGQc@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres
+
+    npx prisma db pull
+
+    ping db.ihxwzyizrwluxbvrfcyj.supabase.co
+
+    dig @8.8.8.8 db.myhost.supabase.co
+
+### 重新初始化
+```bash
+rm -rf node_modules
+rm -rf node_modules/.prisma
+rm -rf .next
+pnpm store prune
+pnpm install
+npx prisma generate
+pnpm prisma generate
+pnpm prisma db push
+
+
+pnpm update
+npx prisma db push
+npx prisma db pull
+npx prisma generate
+npx prisma migrate dev --name init
+
+```
+
