@@ -584,5 +584,6 @@ npx ts-node scripts/add-recharge-transactions.ts
 npx ts-node data/recharge-merchants.ts
 npx ts-node data/recharge-players.ts
 
+sleep
 
 ```
