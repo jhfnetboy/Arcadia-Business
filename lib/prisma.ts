@@ -1,11 +1,12 @@
 import { PrismaClient } from "@prisma/client"
+import { logDatabaseUrl, maskDatabaseUrl, getErrorDetails } from "./utils"
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
-// 添加调试信息，输出数据库连接 URL
-console.log("DATABASE_URL from env:", process.env.DATABASE_URL)
+// 安全地记录数据库连接URL
+logDatabaseUrl(process.env.DATABASE_URL || '')
 
 // 创建 Prisma 客户端实例，显式指定数据库 URL 和连接超时
 export const prisma = globalForPrisma.prisma ?? new PrismaClient({
@@ -27,28 +28,13 @@ export const prisma = globalForPrisma.prisma ?? new PrismaClient({
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 
-// 错误处理辅助函数
-const getErrorDetails = (error: unknown) => {
-  if (error instanceof Error) {
-    return {
-      name: error.name,
-      message: error.message,
-      stack: error.stack || ''
-    };
-  }
-  return {
-    name: 'Unknown Error',
-    message: String(error),
-    stack: ''
-  };
-};
-
 /**
  * 测试数据库连接
  * 尝试执行一个简单的查询来验证连接是否正常
  */
 export async function testConnection() {
-  console.log("测试数据库连接，URL:", process.env.DATABASE_URL)
+  // 安全地记录数据库URL
+  logDatabaseUrl(process.env.DATABASE_URL || '', '测试数据库连接，URL')
   
   try {
     // 尝试执行一个简单的查询
@@ -96,12 +82,8 @@ export function createPrismaClient(options: {
     }
   }
   
-  // 安全地显示数据库 URL（隐藏密码）
-  const safeDbUrl = dbUrl ? 
-    `${dbUrl.split('@')[0].split(':')[0]}:****@${dbUrl.split('@')[1]}` : 
-    'undefined';
-  
-  console.log(`创建新的 Prisma 客户端，URL: ${safeDbUrl}`);
+  // 安全地记录数据库URL
+  logDatabaseUrl(dbUrl, '创建新的 Prisma 客户端，URL');
   
   return new PrismaClient({
     datasources: {

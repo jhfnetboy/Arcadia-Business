@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
 const { Decimal } = Prisma
 import NewCouponForm from "@/components/new-coupon-form"
+import { logDatabaseUrl } from "@/lib/utils"
 
 // Helper function to format date for display
 function formatDate(date: Date): string {
@@ -50,80 +51,32 @@ interface FormattedPromotionType {
 }
 
 export default async function NewCouponPage() {
+  console.log('开始加载新优惠券页面...')
+  
+  // 安全地记录数据库URL
+  logDatabaseUrl(process.env.DATABASE_URL || '', '新优惠券页面 DATABASE_URL')
+  
   const session = await auth()
   const user = session?.user
 
   if (!user?.email) {
+    console.log('用户未登录，重定向到登录页面')
     redirect("/sign-in")
   }
 
+  console.log('正在查询用户商家资料...')
   const userWithProfile = await prisma.user.findUnique({
     where: { email: user.email },
     include: { merchantProfile: true }
   })
+  console.log('用户商家资料查询结果:', userWithProfile ? '成功' : '失败')
 
   if (!userWithProfile?.merchantProfile) {
+    console.log('用户没有商家资料，重定向到创建商家页面')
     redirect("/merchant/new")
   }
 
-  const categories = await prisma.couponCategory.findMany()
-  const promotionTypes = await prisma.promotionType.findMany({
-    orderBy: { name: 'asc' }
-  })
-
-  // Log raw data from database
-  console.log('Raw promotion types from DB:', JSON.stringify(promotionTypes, null, 2))
-
-  // Transform the data to match the component's expected format
-  const formattedPromotionTypes = promotionTypes.map((pt: {
-    type: string;
-    name: string;
-    basePoints: number;
-    affect: string;
-    calculate: string;
-    description: string;
-    defaultNum: number | null;
-    requirePeopleNum: number | null;
-    condition: number | null;
-    payType: string | null;
-  }) => {
-    // First log the raw data we're working with
-    console.log('Raw data for type:', pt.type, JSON.stringify({
-      basePoints: pt.basePoints,
-      defaultNum: pt.defaultNum,
-      name: pt.name
-    }, null, 2))
-
-    const formatted: FormattedPromotionType = {
-      type: pt.type,
-      name: pt.name,
-      basePoints: pt.basePoints,
-      affect: pt.affect,
-      calculate: pt.calculate,
-      description: pt.description,
-      num: pt.defaultNum ?? 0,
-      require_people_num: pt.requirePeopleNum ?? undefined,
-      condition: pt.condition ?? undefined,
-      pay_type: pt.payType ?? undefined
-    }
-
-    // Log the formatted data to verify the transformation
-    console.log('Formatted data for type:', pt.type, JSON.stringify({
-      basePoints: formatted.basePoints,
-      num: formatted.num,
-      name: formatted.name
-    }, null, 2))
-
-    return formatted
-  })
-
-  // Log final formatted data with explicit fields
-  console.log('All formatted promotion types:', JSON.stringify(formattedPromotionTypes.map((pt: FormattedPromotionType) => ({
-    type: pt.type,
-    name: pt.name,
-    basePoints: pt.basePoints
-  })), null, 2))
-
+  // 定义createCoupon函数在try块外面
   async function createCoupon(formData: FormData) {
     "use server"
 
@@ -262,19 +215,96 @@ export default async function NewCouponPage() {
     redirect("/merchant/coupons")
   }
 
-  const defaultDates = getDefaultDates()
-  return (
-    <div className="container max-w-2xl py-8">
-      <NewCouponForm 
-        categories={categories} 
-        promotionTypes={formattedPromotionTypes}
-        merchant={userWithProfile.merchantProfile} 
-        defaultDates={{
-          startDate: defaultDates.startDate,
-          endDate: defaultDates.endDate
-        }}
-        onSubmit={createCoupon} 
-      />
-    </div>
-  )
+  console.log('正在查询优惠券分类...')
+  try {
+    const categories = await prisma.couponCategory.findMany()
+    console.log(`成功获取 ${categories.length} 个优惠券分类:`, categories.map(c => c.name))
+    
+    console.log('正在查询促销类型...')
+    const promotionTypes = await prisma.promotionType.findMany({
+      orderBy: { name: 'asc' }
+    })
+    console.log(`成功获取 ${promotionTypes.length} 个促销类型`)
+
+    // Log raw data from database
+    console.log('Raw promotion types from DB:', JSON.stringify(promotionTypes, null, 2))
+
+    // Transform the data to match the component's expected format
+    const formattedPromotionTypes = promotionTypes.map((pt: {
+      type: string;
+      name: string;
+      basePoints: number;
+      affect: string;
+      calculate: string;
+      description: string;
+      defaultNum: number | null;
+      requirePeopleNum: number | null;
+      condition: number | null;
+      payType: string | null;
+    }) => {
+      // First log the raw data we're working with
+      console.log('Raw data for type:', pt.type, JSON.stringify({
+        basePoints: pt.basePoints,
+        defaultNum: pt.defaultNum,
+        name: pt.name
+      }, null, 2))
+
+      const formatted: FormattedPromotionType = {
+        type: pt.type,
+        name: pt.name,
+        basePoints: pt.basePoints,
+        affect: pt.affect,
+        calculate: pt.calculate,
+        description: pt.description,
+        num: pt.defaultNum ?? 0,
+        require_people_num: pt.requirePeopleNum ?? undefined,
+        condition: pt.condition ?? undefined,
+        pay_type: pt.payType ?? undefined
+      }
+
+      // Log the formatted data to verify the transformation
+      console.log('Formatted data for type:', pt.type, JSON.stringify({
+        basePoints: formatted.basePoints,
+        num: formatted.num,
+        name: formatted.name
+      }, null, 2))
+
+      return formatted
+    })
+
+    // Log final formatted data with explicit fields
+    console.log('All formatted promotion types:', JSON.stringify(formattedPromotionTypes.map((pt: FormattedPromotionType) => ({
+      type: pt.type,
+      name: pt.name,
+      basePoints: pt.basePoints
+    })), null, 2))
+
+    const defaultDates = getDefaultDates()
+    console.log('页面加载完成，准备渲染表单')
+    return (
+      <div className="container max-w-2xl py-8">
+        <NewCouponForm 
+          categories={categories} 
+          promotionTypes={formattedPromotionTypes}
+          merchant={userWithProfile.merchantProfile} 
+          defaultDates={{
+            startDate: defaultDates.startDate,
+            endDate: defaultDates.endDate
+          }}
+          onSubmit={createCoupon} 
+        />
+      </div>
+    )
+  } catch (error) {
+    console.error('加载页面时出错:', error)
+    return (
+      <div className="container max-w-2xl py-8">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" role="alert">
+          <strong className="font-bold">加载错误!</strong>
+          <span className="block sm:inline"> 无法加载优惠券分类或促销类型。请稍后再试。</span>
+          <p className="mt-2 text-sm">错误详情: {error instanceof Error ? error.message : String(error)}</p>
+        </div>
+      </div>
+    )
+  }
 } 

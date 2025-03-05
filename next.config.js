@@ -4,6 +4,15 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '10mb'
     }
+  },
+  images: {
+    domains: [
+      'lh3.googleusercontent.com', // Google用户头像
+      'avatars.githubusercontent.com', // GitHub头像
+      'platform-lookaside.fbsbx.com', // Facebook头像
+      'pbs.twimg.com', // Twitter头像
+      'cdn.discordapp.com' // Discord头像
+    ]
   }
 }
 
