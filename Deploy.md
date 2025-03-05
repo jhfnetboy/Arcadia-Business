@@ -574,3 +574,15 @@ npx prisma migrate dev --name init
 
 ```
 
+数据库需要初始化两个表：
+```bash
+npx ts-node data/seed-categories.ts
+npx ts-node scripts/init-promotion-types.ts
+
+npx ts-node scripts/add-recharge-transactions.ts
+npx ts-node data/recharge-merchants.ts
+npx ts-node data/recharge-players.ts
+
+
+
+```
