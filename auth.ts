@@ -83,9 +83,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   debug: true,
   theme: { logo: "https://authjs.dev/img/logo-sm.png" },
   pages: {
-    signIn: "/signin",
+    signIn: "/auth/signin",
     signOut: "/",
-    error: "/error"
+    error: "/auth/error"
   },
   providers: [
     // Apple,
@@ -145,11 +145,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     // WorkOS({ connection: process.env.AUTH_WORKOS_CONNECTION! }),
     // Zoom,
   ],
-  basePath: "/auth",
   session: { strategy: "jwt" },
   callbacks: {
     async redirect({ url, baseUrl }) {
       console.log("Redirect callback:", { url, baseUrl });
+      console.log("Current URL path:", url);
+      console.log("Base URL:", baseUrl);
+      
+      if (url.startsWith("/")) {
+        return `${baseUrl}${url}`;
+      }
+      
       return url.startsWith(baseUrl) ? url : baseUrl;
     },
     async session({ session, token }) {
