@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { Prisma } from '@prisma/client'
+import type { PrismaClient } from '@prisma/client'
 
 export async function GET() {
   console.log('测试数据库连接 API 被调用')
@@ -64,4 +64,4 @@ function maskDatabaseUrl(url: string): string {
   } catch (error) {
     return '已设置但无法解析'
   }
-} 
+}
