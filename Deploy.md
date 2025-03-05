@@ -1,223 +1,223 @@
-# 部署指南 / Deployment Guide
+'use client'
 
-## 中文版本
+import { useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { InfoIcon, CheckCircleIcon, XCircleIcon, DatabaseIcon, UserIcon, UserPlusIcon } from 'lucide-react'
 
-### 1. 环境准备
-
-#### 1.1 本地环境
-1. 确保安装了 Node.js (v20+)
-2. 安装 pnpm:
-```bash
-npm install -g pnpm
-```
-
-#### 1.2 Supabase 设置
-1. 创建 Supabase 账户并新建项目
-2. 在 Supabase 控制台获取以下信息：
-   - Database URL
-   - Anon Key
-   - Service Role Key
-3. 在项目的 SQL 编辑器中运行初始化脚本：
-```sql
--- 启用必要的扩展
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
-```
-
-#### 1.3 环境变量配置
-1. 复制 `.env.example` 到 `.env`：
-```bash
-cp .env.example .env
-```
-
-2. 填写必要的环境变量：
-
-```
-# Database
-DATABASE_URL="postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres"
-
-# Auth
-AUTH_SECRET="generate a random string"
-AUTH_GOOGLE_ID="from Google Cloud Console"
-AUTH_GOOGLE_SECRET="from Google Cloud Console"
-# ... other auth providers config ...
-
-# Storage
-AUTH_KV_REST_API_URL="from Vercel KV"
-AUTH_KV_REST_API_TOKEN="from Vercel KV"
-
-# Google Maps
-NEXT_PUBLIC_GOOGLE_MAPS_KEY="from Google Cloud Console"
-
-# Other
-NEXT_PUBLIC_APP_URL="your app domain"
-AUTH_DEBUG="1"  # Set to 1 for development, remove for production
-```
-
-### 2. 数据库迁移
-
-1. 生成 Prisma 客户端：
-```bash
-pnpm prisma generate
-```
-
-2. 推送数据库架构：
-```bash
-pnpm prisma db push
-```
-
-3. 如果需要，创建迁移文件：
-```bash
-pnpm prisma migrate dev --name init
-```
-
-
-4. Supbase push
- supabase init
- supabase link
- supabase migration new init
- export your sql modification
- supabase db push
-      supabase db push <path_to_your_sql_file>
-           supabase db push --debug
- supabase db status
-
- ![](https://raw.githubusercontent.com/jhfnetboy/MarkDownImg/main/img/202503031207254.png)
-
-### 3. 测试
-
-1. 运行测试：
-```bash
-pnpm add -g jest
-
-pnpm add --dev jest-environment-jsdom
-
-pnpm test
-```
-
-2. 检查测试覆盖率：
-```bash
-pnpm test:coverage
-```
-
-### 4. Vercel 部署
-
-1. 安装 Vercel CLI：
-```bash
-pnpm install -g vercel
-```
-
-2. 登录 Vercel：
-```bash
-vercel login
-```
-
-3. 链接项目：
-```bash
-vercel link
-```
-
-4. 配置 Vercel 环境变量：
-```bash
-vercel env pull .env.production
-```
-
-5. 部署项目：
-```bash
-vercel --prod
-```
-
-### 5. GitHub Actions CI/CD 配置
-
-1. 在 GitHub 仓库设置中添加以下 Secrets：
-   - `VERCEL_TOKEN`: 从 Vercel 获取的 API 令牌
-   - `VERCEL_ORG_ID`: 从 Vercel 获取的组织 ID
-   - `VERCEL_PROJECT_ID`: 从 Vercel 获取的项目 ID
-
-2. 确保 `.github/workflows/ci.yml` 文件正确配置：
-```yaml
-name: CI
-
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: pnpm/action-setup@v2
-      - uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-          cache: 'pnpm'
-      
-      - name: Install dependencies
-        run: pnpm install
-
-      - name: Run tests
-        run: pnpm test
-
-  deploy:
-    needs: test
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: pnpm/action-setup@v2
-      
-      - name: Deploy to Vercel
-        uses: amondnet/vercel-action@v20
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: '--prod'
-```
-
-### 6. 部署后配置
-
-1. 在 Vercel 控制台中设置自定义域名
-2. 配置 OAuth 提供商的回调 URL：
-   - Google: `https://your-domain.com/auth/callback/google`
-   - GitHub: `https://your-domain.com/auth/callback/github`
-   - Discord: `https://your-domain.com/auth/callback/discord`
-   - 其他提供商...
-
-3. 验证所有环境变量是否正确设置
-4. 测试认证流程和主要功能
-
-### 7. 中间件配置
-
-在 `middleware.ts` 中，我们配置了认证和性能监控中间件：
-
-```typescript
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
-import { auth } from "auth"
-
-// 定义中间件函数
-export function middleware(request: NextRequest) {
-  const start = Date.now()
-  
-  const response = NextResponse.next()
-  
-  // 记录请求处理时间
-  const duration = Date.now() - start
-  console.log(`${request.method} ${request.url} - ${duration}ms`)
-  
-  return response
+// 定义响应类型
+type TestResponse = {
+  success: boolean
+  message: string
+  data?: Record<string, unknown>
 }
 
-// 导出 auth 中间件
-export default auth
+export default function DbTestPage() {
+  // 状态管理
+  const [loading, setLoading] = useState<{[key: string]: boolean}>({
+    connection: false,
+    findUser: false,
+    createUser: false
+  })
+  const [results, setResults] = useState<{[key: string]: TestResponse | null}>({
+    connection: null,
+    findUser: null,
+    createUser: null
+  })
 
-// 配置中间件匹配规则
-export const config = {
-  matcher: ["/((?!auth|api|_next/static|_next/image|favicon.ico).*)"],
+  // 测试数据库连接
+  const testConnection = async () => {
+    setLoading(prev => ({ ...prev, connection: true }))
+    try {
+      const response = await fetch('/api/db-test/connection')
+      const data = await response.json()
+      setResults(prev => ({ ...prev, connection: data }))
+    } catch (error) {
+      setResults(prev => ({ 
+        ...prev, 
+        connection: { 
+          success: false, 
+          message: `测试连接失败：${error instanceof Error ? error.message : String(error)}` 
+        } 
+      }))
+    } finally {
+      setLoading(prev => ({ ...prev, connection: false }))
+    }
+  }
+
+  // 查询用户
+  const findUser = async () => {
+    setLoading(prev => ({ ...prev, findUser: true }))
+    try {
+      const response = await fetch('/api/db-test/find-user')
+      const data = await response.json()
+      setResults(prev => ({ ...prev, findUser: data }))
+    } catch (error) {
+      setResults(prev => ({ 
+        ...prev, 
+        findUser: { 
+          success: false, 
+          message: `查询用户失败：${error instanceof Error ? error.message : String(error)}` 
+        } 
+      }))
+    } finally {
+      setLoading(prev => ({ ...prev, findUser: false }))
+    }
+  }
+
+  // 创建用户
+  const createUser = async () => {
+    setLoading(prev => ({ ...prev, createUser: true }))
+    try {
+      const response = await fetch('/api/db-test/create-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email: `test-user-${Date.now()}@example.com`,
+          name: `测试用户 ${new Date().toLocaleString('zh-CN')}`
+        })
+      })
+      const data = await response.json()
+      setResults(prev => ({ ...prev, createUser: data }))
+    } catch (error) {
+      setResults(prev => ({ 
+        ...prev, 
+        createUser: { 
+          success: false, 
+          message: `创建用户失败：${error instanceof Error ? error.message : String(error)}` 
+        } 
+      }))
+    } finally {
+      setLoading(prev => ({ ...prev, createUser: false }))
+    }
+  }
+
+  // 渲染测试结果
+  const renderResult = (result: TestResponse | null) => {
+    if (!result) return null
+
+    return (
+      <Alert variant={result.success ? "default" : "destructive"}>
+        <div className="flex items-center gap-2">
+          {result.success ? <CheckCircleIcon className="h-4 w-4" /> : <XCircleIcon className="h-4 w-4" />}
+          <AlertTitle>{result.success ? '成功' : '失败'}</AlertTitle>
+        </div>
+        <AlertDescription className="mt-2">
+          {result.message}
+          {result.data && (
+            <pre className="mt-2 bg-muted p-2 rounded text-xs overflow-auto max-h-40">
+              {JSON.stringify(result.data, null, 2)}
+            </pre>
+          )}
+        </AlertDescription>
+      </Alert>
+    )
+  }
+
+  return (
+    <div className="container py-10">
+      <h1 className="text-3xl font-bold mb-6">数据库连接测试</h1>
+      <p className="text-muted-foreground mb-8">
+        此页面用于测试与 Supabase 数据库的连接，并执行基本的数据库操作。
+      </p>
+
+      <div className="grid gap-6">
+        {/* 测试连接 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <DatabaseIcon className="h-5 w-5" />
+              测试数据库连接
+            </CardTitle>
+            <CardDescription>
+              测试应用是否能够连接到 Supabase 数据库
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {results.connection && renderResult(results.connection)}
+          </CardContent>
+          <CardFooter>
+            <Button 
+              onClick={testConnection} 
+              disabled={loading.connection}
+            >
+              {loading.connection ? '测试中...' : '测试连接'}
+            </Button>
+          </CardFooter>
+        </Card>
+
+        {/* 查询用户 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserIcon className="h-5 w-5" />
+              查询用户
+            </CardTitle>
+            <CardDescription>
+              尝试从数据库中查询用户列表
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {results.findUser && renderResult(results.findUser)}
+          </CardContent>
+          <CardFooter>
+            <Button 
+              onClick={findUser} 
+              disabled={loading.findUser}
+              variant="outline"
+            >
+              {loading.findUser ? '查询中...' : '查询用户'}
+            </Button>
+          </CardFooter>
+        </Card>
+
+        {/* 创建用户 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserPlusIcon className="h-5 w-5" />
+              创建用户
+            </CardTitle>
+            <CardDescription>
+              尝试在数据库中创建一个新用户
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {results.createUser && renderResult(results.createUser)}
+          </CardContent>
+          <CardFooter>
+            <Button 
+              onClick={createUser} 
+              disabled={loading.createUser}
+              variant="outline"
+            >
+              {loading.createUser ? '创建中...' : '创建用户'}
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+
+      <div className="mt-8 p-4 bg-muted rounded-lg">
+        <div className="flex items-center gap-2 mb-2">
+          <InfoIcon className="h-5 w-5 text-blue-500" />
+          <h3 className="font-semibold">环境信息</h3>
+        </div>
+        <p className="text-sm text-muted-foreground mb-2">
+          当前使用的数据库连接字符串（部分隐藏）:
+        </p>
+        <pre className="bg-background p-2 rounded text-xs overflow-auto">
+          {process.env.DATABASE_URL ? 
+            process.env.DATABASE_URL.replace(/(:.*@)/g, ':****@') : 
+            '未设置 DATABASE_URL 环境变量'}
+        </pre>
+      </div>
+    </div>
+  )
+} matcher: ["/((?!auth|api|_next/static|_next/image|favicon.ico).*)"],
 }
 ```
 
