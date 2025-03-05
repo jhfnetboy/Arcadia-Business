@@ -574,6 +574,7 @@ npx prisma migrate dev --name init
 
 ```
 
+## 数据库初始化
 数据库需要初始化两个表：
 ```bash
 npx ts-node data/seed-categories.ts
