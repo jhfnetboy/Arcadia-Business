@@ -1,6 +1,13 @@
 import NextAuth from "next-auth"
 import "next-auth/jwt"
 
+// 添加环境变量检查和日志
+console.log("AUTH_SECRET exists:", !!process.env.AUTH_SECRET);
+console.log("NEXTAUTH_URL:", process.env.NEXTAUTH_URL);
+console.log("NEXTAUTH_SECRET exists:", !!process.env.NEXTAUTH_SECRET);
+console.log("AUTH_GOOGLE_ID exists:", !!process.env.AUTH_GOOGLE_ID);
+console.log("AUTH_GOOGLE_SECRET exists:", !!process.env.AUTH_GOOGLE_SECRET);
+
 // import Apple from "next-auth/providers/apple"
 // import Atlassian from "next-auth/providers/atlassian"
 // import Auth0 from "next-auth/providers/auth0"
@@ -33,20 +40,21 @@ import Twitter from "next-auth/providers/twitter"
 // // import Vipps from "next-auth/providers/vipps"
 // import WorkOS from "next-auth/providers/workos"
 // import Zoom from "next-auth/providers/zoom"
-import { createStorage } from "unstorage"
-import memoryDriver from "unstorage/drivers/memory"
-import vercelKVDriver from "unstorage/drivers/vercel-kv"
-import { UnstorageAdapter } from "@auth/unstorage-adapter"
+// 注释掉存储适配器相关代码
+// import { createStorage } from "unstorage"
+// import memoryDriver from "unstorage/drivers/memory"
+// import vercelKVDriver from "unstorage/drivers/vercel-kv"
+// import { UnstorageAdapter } from "@auth/unstorage-adapter"
 
-const storage = createStorage({
-  driver: process.env.VERCEL
-    ? vercelKVDriver({
-        url: process.env.AUTH_KV_REST_API_URL,
-        token: process.env.AUTH_KV_REST_API_TOKEN,
-        env: false,
-      })
-    : memoryDriver(),
-})
+// const storage = createStorage({
+//   driver: process.env.VERCEL
+//     ? vercelKVDriver({
+//         url: process.env.AUTH_KV_REST_API_URL,
+//         token: process.env.AUTH_KV_REST_API_TOKEN,
+//         env: false,
+//       })
+//     : memoryDriver(),
+// })
 
 declare module "next-auth" {
   interface Session {
@@ -72,11 +80,12 @@ declare module "next-auth/jwt" {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  debug: !!process.env.AUTH_DEBUG,
+  debug: true,
   theme: { logo: "https://authjs.dev/img/logo-sm.png" },
-  adapter: UnstorageAdapter(storage),
   pages: {
-    signOut: "/"
+    signIn: "/auth/signin",
+    signOut: "/",
+    error: "/auth/error"
   },
   providers: [
     // Apple,
@@ -139,39 +148,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   basePath: "/auth",
   session: { strategy: "jwt" },
   callbacks: {
-    authorized({ request, auth }) {
-      const { pathname } = request.nextUrl
-      if (pathname === "/middleware-example") return !!auth
-      return true
-    },
-    async signIn({ user, account, profile }) {
-      if (!user.email) return false
-      return true
-    },
-    jwt({ token, trigger, session, account }) {
-      if (trigger === "update") token.name = session.user.name
-      if (account?.provider === "keycloak") {
-        return { ...token, accessToken: account.access_token }
-      }
-      return token
-    },
-    async session({ session, token, user }) {
-      if (token?.accessToken) session.accessToken = token.accessToken
-      
-      // Add user verification status to session
-      if (session.user) {
-        session.user.isNewUser = !user
-      }
-      
-      return session
-    },
     async redirect({ url, baseUrl }) {
-      // 如果URL以baseUrl开头，则允许重定向
-      if (url.startsWith(baseUrl)) return url
-      // 否则重定向到baseUrl
-      return baseUrl
+      console.log("Redirect callback:", { url, baseUrl });
+      return url.startsWith(baseUrl) ? url : baseUrl;
+    },
+    async session({ session, token }) {
+      console.log("Session callback:", { session, token });
+      return session;
+    },
+    async jwt({ token, account }) {
+      console.log("JWT callback:", { token, account });
+      return token;
     }
   },
-  
-  // experimental: { enableWebAuthn: true },
 })
