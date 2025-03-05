@@ -1,12 +1,36 @@
 import NextAuth from "next-auth"
 import "next-auth/jwt"
 
-// 添加环境变量检查和日志
-console.log("AUTH_SECRET exists:", !!process.env.AUTH_SECRET);
-console.log("NEXTAUTH_URL:", process.env.NEXTAUTH_URL);
-console.log("NEXTAUTH_SECRET exists:", !!process.env.NEXTAUTH_SECRET);
-console.log("AUTH_GOOGLE_ID exists:", !!process.env.AUTH_GOOGLE_ID);
-console.log("AUTH_GOOGLE_SECRET exists:", !!process.env.AUTH_GOOGLE_SECRET);
+// 增强环境变量检查和日志
+const envCheck = {
+  AUTH_SECRET: process.env.AUTH_SECRET,
+  NEXTAUTH_URL: process.env.NEXTAUTH_URL,
+  NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
+  AUTH_GOOGLE_ID: process.env.AUTH_GOOGLE_ID,
+  AUTH_GOOGLE_SECRET: process.env.AUTH_GOOGLE_SECRET
+};
+
+// 记录环境变量状态（不显示实际值，只显示是否存在）
+console.log("环境变量检查:");
+for (const [key, value] of Object.entries(envCheck)) {
+  console.log(`- ${key}: ${value ? "已设置" : "未设置"}`);
+  
+  // 对于 NEXTAUTH_URL，检查是否与当前域名匹配
+  if (key === "NEXTAUTH_URL" && value) {
+    console.log(`  NEXTAUTH_URL 值: ${value}`);
+    if (typeof window !== "undefined") {
+      console.log(`  当前域名: ${window.location.origin}`);
+      console.log(`  是否匹配: ${value.includes(window.location.host)}`);
+    }
+  }
+}
+
+// 添加全局错误处理器
+if (typeof window !== "undefined") {
+  window.addEventListener("error", (event) => {
+    console.error("全局错误:", event.error);
+  });
+}
 
 // import Apple from "next-auth/providers/apple"
 // import Atlassian from "next-auth/providers/atlassian"
@@ -149,14 +173,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
   callbacks: {
     async redirect({ url, baseUrl }) {
+      // 添加更详细的日志
       console.log("Redirect callback:", { url, baseUrl });
       console.log("Current URL path:", url);
       console.log("Base URL:", baseUrl);
       
+      // 处理预览部署 URL
+      const currentHost = typeof window !== "undefined" ? window.location.host : "";
+      if (currentHost && !baseUrl.includes(currentHost)) {
+        console.log("检测到预览部署，调整 baseUrl:", currentHost);
+        baseUrl = `https://${currentHost}`;
+      }
+      
+      // 优化重定向逻辑
       if (url.startsWith("/")) {
+        // 如果是相对路径，添加 baseUrl
         return `${baseUrl}${url}`;
       }
       
+      // 如果已经是完整的 URL 且以 baseUrl 开头，或者是其他外部 URL
       return url.startsWith(baseUrl) ? url : baseUrl;
     },
     async session({ session, token }) {
@@ -168,4 +203,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return token;
     }
   },
+  events: {
+    async signIn({ user, account, profile, isNewUser }) {
+      console.log("用户登录:", { 
+        userId: user.id, 
+        provider: account?.provider,
+        isNewUser
+      });
+    }
+  }
 })
