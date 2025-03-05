@@ -1,180 +1,180 @@
-'use client'
+import NextAuth from "next-auth"
+import "next-auth/jwt"
 
-import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { InfoIcon, CheckCircleIcon, XCircleIcon, DatabaseIcon, UserIcon, UserPlusIcon } from 'lucide-react'
+// import Apple from "next-auth/providers/apple"
+// import Atlassian from "next-auth/providers/atlassian"
+// import Auth0 from "next-auth/providers/auth0"
+// import AzureB2C from "next-auth/providers/azure-ad-b2c"
+// import BankIDNorway from "next-auth/providers/bankid-no"
+// import BoxyHQSAML from "next-auth/providers/boxyhq-saml"
+// import Cognito from "next-auth/providers/cognito"
+import Coinbase from "next-auth/providers/coinbase"
+import Discord from "next-auth/providers/discord"
+// import Dropbox from "next-auth/providers/dropbox"
+// import Facebook from "next-auth/providers/facebook"
+import GitHub from "next-auth/providers/github"
+// import GitLab from "next-auth/providers/gitlab"
+import Google from "next-auth/providers/google"
+// // import Hubspot from "next-auth/providers/hubspot"
+// import Keycloak from "next-auth/providers/keycloak"
+// import LinkedIn from "next-auth/providers/linkedin"
+// import MicrosoftEntraId from "next-auth/providers/microsoft-entra-id"
+// import Netlify from "next-auth/providers/netlify"
+// import Okta from "next-auth/providers/okta"
+// import Passage from "next-auth/providers/passage"
+// import Passkey from "next-auth/providers/passkey"
+// import Pinterest from "next-auth/providers/pinterest"
+import Reddit from "next-auth/providers/reddit"
+import Slack from "next-auth/providers/slack"
+// import Salesforce from "next-auth/providers/salesforce"
+// import Spotify from "next-auth/providers/spotify"
+// import Twitch from "next-auth/providers/twitch"
+import Twitter from "next-auth/providers/twitter"
+// // import Vipps from "next-auth/providers/vipps"
+// import WorkOS from "next-auth/providers/workos"
+// import Zoom from "next-auth/providers/zoom"
+import { createStorage } from "unstorage"
+import memoryDriver from "unstorage/drivers/memory"
+import vercelKVDriver from "unstorage/drivers/vercel-kv"
+import { UnstorageAdapter } from "@auth/unstorage-adapter"
 
-// 定义响应类型
-type TestResponse = {
-  success: boolean
-  message: string
-  data?: Record<string, unknown>
+const storage = createStorage({
+  driver: process.env.VERCEL
+    ? vercelKVDriver({
+        url: process.env.AUTH_KV_REST_API_URL,
+        token: process.env.AUTH_KV_REST_API_TOKEN,
+        env: false,
+      })
+    : memoryDriver(),
+})
+
+declare module "next-auth" {
+  interface Session {
+    accessToken?: string
+    user: {
+      isNewUser?: boolean
+      name?: string | null
+      email?: string | null
+      image?: string | null
+    }
+  }
+
+  interface User {
+    isNewUser?: boolean
+  }
 }
 
-export default function DbTestPage() {
-  // 状态管理
-  const [loading, setLoading] = useState<{[key: string]: boolean}>({
-    connection: false,
-    findUser: false,
-    createUser: false
-  })
-  const [results, setResults] = useState<{[key: string]: TestResponse | null}>({
-    connection: null,
-    findUser: null,
-    createUser: null
-  })
+declare module "next-auth/jwt" {
+  interface JWT {
+    accessToken?: string
+    isNewUser?: boolean
+  }
+}
 
-  // 测试数据库连接
-  const testConnection = async () => {
-    setLoading(prev => ({ ...prev, connection: true }))
-    try {
-      const response = await fetch('/api/db-test/connection')
-      const data = await response.json()
-      setResults(prev => ({ ...prev, connection: data }))
-    } catch (error) {
-      setResults(prev => ({ 
-        ...prev, 
-        connection: { 
-          success: false, 
-          message: `测试连接失败：${error instanceof Error ? error.message : String(error)}` 
-        } 
-      }))
-    } finally {
-      setLoading(prev => ({ ...prev, connection: false }))
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  debug: !!process.env.AUTH_DEBUG,
+  theme: { logo: "https://authjs.dev/img/logo-sm.png" },
+  adapter: UnstorageAdapter(storage),
+  pages: {
+    signOut: "/"
+  },
+  providers: [
+    // Apple,
+    // Atlassian,
+    // Auth0,
+    // AzureB2C,
+    // BankIDNorway,
+    // BoxyHQSAML({
+    //   clientId: "dummy",
+    //   clientSecret: "dummy",
+    //   issuer: process.env.AUTH_BOXYHQ_SAML_ISSUER,
+    // }),
+    // Cognito,
+    Coinbase,
+    Discord,
+    // Dropbox,
+    // Facebook,
+    GitHub,
+    // GitLab,
+    Google({
+      clientId: process.env.AUTH_GOOGLE_ID,
+      clientSecret: process.env.AUTH_GOOGLE_SECRET,
+      authorization: {
+        params: {
+          prompt: "consent",
+          access_type: "offline",
+          response_type: "code"
+        }
+      }
+    }),
+    // Hubspot,
+    // Keycloak({ name: "Keycloak (bob/bob)" }),
+    // LinkedIn,
+    // MicrosoftEntraId,
+    // Netlify,
+    // Okta,
+    // Passkey({
+    //   formFields: {
+    //     email: {
+    //       label: "Username",
+    //       required: true,
+    //       autocomplete: "username webauthn",
+    //     },
+    //   },
+    // }),
+    // Passage,
+    // Pinterest,
+    Reddit,
+    // Salesforce,
+    Slack,
+    // Spotify,
+    // Twitch,
+    Twitter,
+    // Vipps({
+    //   issuer: "https://apitest.vipps.no/access-management-1.0/access/",
+    // }),
+    // WorkOS({ connection: process.env.AUTH_WORKOS_CONNECTION! }),
+    // Zoom,
+  ],
+  basePath: "/auth",
+  session: { strategy: "jwt" },
+  callbacks: {
+    authorized({ request, auth }) {
+      const { pathname } = request.nextUrl
+      if (pathname === "/middleware-example") return !!auth
+      return true
+    },
+    async signIn({ user, account, profile }) {
+      if (!user.email) return false
+      return true
+    },
+    jwt({ token, trigger, session, account }) {
+      if (trigger === "update") token.name = session.user.name
+      if (account?.provider === "keycloak") {
+        return { ...token, accessToken: account.access_token }
+      }
+      return token
+    },
+    async session({ session, token, user }) {
+      if (token?.accessToken) session.accessToken = token.accessToken
+      
+      // Add user verification status to session
+      if (session.user) {
+        session.user.isNewUser = !user
+      }
+      
+      return session
+    },
+    async redirect({ url, baseUrl }) {
+      // 如果 URL 以 baseUrl 开头，则允许重定向
+      if (url.startsWith(baseUrl)) return url
+      // 否则重定向到 baseUrl
+      return baseUrl
     }
-  }
-
-  // 查询用户
-  const findUser = async () => {
-    setLoading(prev => ({ ...prev, findUser: true }))
-    try {
-      const response = await fetch('/api/db-test/find-user')
-      const data = await response.json()
-      setResults(prev => ({ ...prev, findUser: data }))
-    } catch (error) {
-      setResults(prev => ({ 
-        ...prev, 
-        findUser: { 
-          success: false, 
-          message: `查询用户失败：${error instanceof Error ? error.message : String(error)}` 
-        } 
-      }))
-    } finally {
-      setLoading(prev => ({ ...prev, findUser: false }))
-    }
-  }
-
-  // 创建用户
-  const createUser = async () => {
-    setLoading(prev => ({ ...prev, createUser: true }))
-    try {
-      const response = await fetch('/api/db-test/create-user', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          email: `test-user-${Date.now()}@example.com`,
-          name: `测试用户 ${new Date().toLocaleString('zh-CN')}`
-        })
-      })
-      const data = await response.json()
-      setResults(prev => ({ ...prev, createUser: data }))
-    } catch (error) {
-      setResults(prev => ({ 
-        ...prev, 
-        createUser: { 
-          success: false, 
-          message: `创建用户失败：${error instanceof Error ? error.message : String(error)}` 
-        } 
-      }))
-    } finally {
-      setLoading(prev => ({ ...prev, createUser: false }))
-    }
-  }
-
-  // 渲染测试结果
-  const renderResult = (result: TestResponse | null) => {
-    if (!result) return null
-
-    return (
-      <Alert variant={result.success ? "default" : "destructive"}>
-        <div className="flex items-center gap-2">
-          {result.success ? <CheckCircleIcon className="h-4 w-4" /> : <XCircleIcon className="h-4 w-4" />}
-          <AlertTitle>{result.success ? '成功' : '失败'}</AlertTitle>
-        </div>
-        <AlertDescription className="mt-2">
-          {result.message}
-          {result.data && (
-            <pre className="mt-2 bg-muted p-2 rounded text-xs overflow-auto max-h-40">
-              {JSON.stringify(result.data, null, 2)}
-            </pre>
-          )}
-        </AlertDescription>
-      </Alert>
-    )
-  }
-
-  return (
-    <div className="container py-10">
-      <h1 className="text-3xl font-bold mb-6">数据库连接测试</h1>
-      <p className="text-muted-foreground mb-8">
-        此页面用于测试与 Supabase 数据库的连接，并执行基本的数据库操作。
-      </p>
-
-      <div className="grid gap-6">
-        {/* 测试连接 */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DatabaseIcon className="h-5 w-5" />
-              测试数据库连接
-            </CardTitle>
-            <CardDescription>
-              测试应用是否能够连接到 Supabase 数据库
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {results.connection && renderResult(results.connection)}
-          </CardContent>
-          <CardFooter>
-            <Button 
-              onClick={testConnection} 
-              disabled={loading.connection}
-            >
-              {loading.connection ? '测试中...' : '测试连接'}
-            </Button>
-          </CardFooter>
-        </Card>
-
-        {/* 查询用户 */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <UserIcon className="h-5 w-5" />
-              查询用户
-            </CardTitle>
-            <CardDescription>
-              尝试从数据库中查询用户列表
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {results.findUser && renderResult(results.findUser)}
-          </CardContent>
-          <CardFooter>
-            <Button 
-              onClick={findUser} 
-              disabled={loading.findUser}
-              variant="outline"
-            >
-              {loading.findUser ? '查询中...' : '查询用户'}
-            </Button>
-          </CardFooter>
-        </Card>
-
+  },
+  
+  // experimental: { enableWebAuthn: true },
+})
         {/* 创建用户 */}
         <Card>
           <CardHeader>
