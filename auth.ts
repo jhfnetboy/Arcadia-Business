@@ -84,7 +84,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   theme: { logo: "https://authjs.dev/img/logo-sm.png" },
   pages: {
     signIn: "/auth/signin",
-    signOut: "/",
+    signOut: "/auth/signout",
     error: "/auth/error"
   },
   providers: [
@@ -145,6 +145,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     // WorkOS({ connection: process.env.AUTH_WORKOS_CONNECTION! }),
     // Zoom,
   ],
+  basePath: "/api/auth",
   session: { strategy: "jwt" },
   callbacks: {
     async redirect({ url, baseUrl }) {
