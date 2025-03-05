@@ -83,9 +83,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   debug: true,
   theme: { logo: "https://authjs.dev/img/logo-sm.png" },
   pages: {
-    signIn: "/auth/signin",
+    signIn: "/signin",
     signOut: "/",
-    error: "/auth/error"
+    error: "/error"
   },
   providers: [
     // Apple,
