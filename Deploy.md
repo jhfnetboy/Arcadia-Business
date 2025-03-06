@@ -577,12 +577,23 @@ npx prisma migrate dev --name init
 ## 数据库初始化
 数据库需要初始化两个表：
 ```bash
+npx prisma generate
 npx ts-node data/seed-categories.ts
 npx ts-node scripts/init-promotion-types.ts
 
 npx ts-node scripts/add-recharge-transactions.ts
 npx ts-node data/recharge-merchants.ts
 npx ts-node data/recharge-players.ts
+
+或者 node 23.x 以上
+pnpm add -D tsx
+npx prisma generate
+npx tsx data/seed-categories.ts
+npx tsx scripts/init-promotion-types.ts
+
+npx tsx scripts/add-recharge-transactions.ts
+npx tsx data/recharge-merchants.ts
+npx tsx data/recharge-players.ts
 
 
 ```
