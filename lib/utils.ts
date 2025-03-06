@@ -5,6 +5,30 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/**
+ * 根据运行模式获取数据库URL
+ * @returns 数据库URL
+ */
+export const getDatabaseUrl = (): string => {
+  const mode = process.env.MODE || 'local';
+  const localUrl = process.env.DATABASE_URL_LOCAL;
+  const prdUrl = process.env.DATABASE_URL_PRD;
+  const url = process.env.DATABASE_URL;
+
+  // 如果直接设置了 DATABASE_URL，优先使用
+  if (url) return url;
+
+  // 根据模式选择URL
+  if (mode === 'prd') {
+    if (!prdUrl) throw new Error('Production database URL not set');
+    return prdUrl;
+  }
+
+  // 默认使用本地数据库
+  if (!localUrl) throw new Error('Local database URL not set');
+  return localUrl;
+};
+
 export function generatePasscode(length: number = 8): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
   let result = ''
