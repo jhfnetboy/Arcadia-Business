@@ -174,6 +174,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return baseUrl
     }
   },
+  trustHost: true,
   
   // experimental: { enableWebAuthn: true },
 })
