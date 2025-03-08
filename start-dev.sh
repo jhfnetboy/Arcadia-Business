@@ -1,2 +1,3 @@
 rm -rf .next
-npm run dev --clear
+# npm run dev --clear
+pnpm run dev
