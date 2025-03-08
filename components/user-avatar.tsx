@@ -1,28 +1,31 @@
-'use client'
+"use client"
 
-import Image from "next/image"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { User } from "@prisma/client"
+import { useEffect, useState } from "react"
+import { getOrFetchAvatar } from "@/lib/avatar-cache"
 
 interface UserAvatarProps {
-  src: string | null | undefined
-  alt: string
-  size?: number
+  user: User
+  className?: string
 }
 
-export function UserAvatar({ src, alt, size = 50 }: UserAvatarProps) {
-  if (!src) {
-    return null
-  }
+export function UserAvatar({ user, className }: UserAvatarProps) {
+  const [avatarUrl, setAvatarUrl] = useState<string>('/default-avatar.png')
+
+  useEffect(() => {
+    const loadAvatar = async () => {
+      if (!user) return
+      const url = await getOrFetchAvatar(user)
+      setAvatarUrl(url)
+    }
+    loadAvatar()
+  }, [user])
 
   return (
-    <div className="relative" style={{ width: size, height: size }}>
-      <Image 
-        src={src} 
-        alt={alt}
-        width={size}
-        height={size}
-        className="rounded-full object-cover"
-        priority
-      />
-    </div>
+    <Avatar className={className}>
+      <AvatarImage src={avatarUrl} alt={user?.name || 'User'} />
+      <AvatarFallback>{user?.name?.charAt(0) || 'U'}</AvatarFallback>
+    </Avatar>
   )
 } 

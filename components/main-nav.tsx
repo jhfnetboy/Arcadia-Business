@@ -37,10 +37,10 @@ export function MainNav() {
         <Button variant="ghost" className="p-0">
           <Image
             src="/logo.png"
-            alt="Home"
-            width="32"
-            height="32"
-            className="min-w-8"
+            alt="Logo"
+            width={32}
+            height={32}
+            className="mr-2"
           />
         </Button>
       </CustomLink>
