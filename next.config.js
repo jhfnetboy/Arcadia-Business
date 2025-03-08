@@ -6,6 +6,15 @@ const nextConfig = {
     }
   },
   images: {
+    unoptimized: true,
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'ntsjepamqixrxjzdnidv.supabase.co',
+        port: '',
+        pathname: '/storage/v1/object/public/**',
+      },
+    ],
     domains: [
       'lh3.googleusercontent.com', // Google用户头像
       'avatars.githubusercontent.com', // GitHub头像

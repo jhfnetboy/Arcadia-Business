@@ -36,7 +36,7 @@ export async function GET() {
   
   // 获取原始数据库 URL
   const originalDbUrl = process.env.DATABASE_URL
-  console.log('原始 DATABASE_URL:', originalDbUrl)
+  // console.log('原始 DATABASE_URL:', originalDbUrl)
   
   if (!originalDbUrl) {
     return NextResponse.json(
@@ -74,7 +74,7 @@ export async function GET() {
 
   // 测试每个连接选项
   for (const option of connectionOptions) {
-    console.log(`尝试连接选项: ${option.name}`)
+    console.log(`尝试连接选项：${option.name}`)
     
     try {
       const startTime = Date.now()
@@ -89,7 +89,7 @@ export async function GET() {
 
       // 尝试连接
       await client.connect()
-      console.log(`连接成功: ${option.name}`)
+      console.log(`连接成功：${option.name}`)
       
       // 执行简单查询
       const result = await client.query('SELECT 1 as connected')
@@ -108,14 +108,14 @@ export async function GET() {
         data: result.rows[0]
       })
     } catch (error) {
-      console.error(`连接失败: ${option.name}`, error)
+      console.error(`连接失败：${option.name}`, error)
       
       const errorDetails = getErrorDetails(error);
       
       results.push({
         option: option.name,
         success: false,
-        message: `连接失败: ${errorDetails.message}`,
+        message: `连接失败：${errorDetails.message}`,
         errorDetails
       })
     }

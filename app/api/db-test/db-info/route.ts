@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 export async function GET() {
   console.log('获取数据库连接信息 API 被调用')
   const dbUrl = process.env.DATABASE_URL || ''
-  console.log('DATABASE_URL:', dbUrl)
+  // console.log('DATABASE_URL:', dbUrl)
   
   try {
     // 返回成功响应，不执行数据库查询

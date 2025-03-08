@@ -22,7 +22,7 @@ export async function GET() {
   
   // 获取数据库 URL
   const dbUrl = process.env.DATABASE_URL
-  console.log('原始 DATABASE_URL:', dbUrl)
+  // console.log('原始 DATABASE_URL:', dbUrl)
   
   if (!dbUrl) {
     return NextResponse.json(
@@ -50,7 +50,7 @@ export async function GET() {
     
     // 执行简单查询
     const result = await client.query('SELECT 1 as connected')
-    console.log('查询结果:', result.rows[0])
+    console.log('查询结果：', result.rows[0])
     
     // 关闭连接
     await client.end()
@@ -65,13 +65,13 @@ export async function GET() {
       timestamp: new Date().toISOString()
     })
   } catch (error) {
-    console.error('直接连接 Supabase 失败:', error)
+    console.error('直接连接 Supabase 失败：', error)
     
     const errorDetails = getErrorDetails(error);
     
     return NextResponse.json({
       success: false,
-      message: `直接连接 Supabase 失败: ${errorDetails.message}`,
+      message: `直接连接 Supabase 失败：${errorDetails.message}`,
       errorDetails,
       timestamp: new Date().toISOString()
     }, { status: 500 })

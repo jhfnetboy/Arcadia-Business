@@ -10,7 +10,7 @@ export async function GET() {
   
   try {
     const dbUrl = process.env.DATABASE_URL || ''
-    console.log('DATABASE_URL:', dbUrl)
+    // console.log('DATABASE_URL:', dbUrl)
     
     // 解析数据库主机名
     let hostname = ''
@@ -18,11 +18,11 @@ export async function GET() {
       const url = new URL(dbUrl)
       hostname = url.hostname
     } catch (error) {
-      console.error('解析数据库 URL 失败:', error)
+      console.error('解析数据库 URL 失败：', error)
       hostname = 'aws-0-ap-southeast-1.pooler.supabase.com'
     }
     
-    console.log('数据库主机名:', hostname)
+    console.log('数据库主机名：', hostname)
     
     // 测试 DNS 解析
     let dnsResult: string | unknown
@@ -34,8 +34,8 @@ export async function GET() {
         })
       })
     } catch (error) {
-      console.error('DNS 解析失败:', error)
-      dnsResult = `DNS 解析失败: ${error instanceof Error ? error.message : String(error)}`
+      console.error('DNS 解析失败：', error)
+      dnsResult = `DNS 解析失败：${error instanceof Error ? error.message : String(error)}`
     }
     
     // 测试 TCP 连接
@@ -44,8 +44,8 @@ export async function GET() {
       const { stdout, stderr } = await execPromise(`nc -zv ${hostname} 5432 2>&1 || echo "连接失败"`)
       tcpResult = stdout || stderr
     } catch (error) {
-      console.error('TCP 连接测试失败:', error)
-      tcpResult = `TCP 连接测试失败: ${error instanceof Error ? error.message : String(error)}`
+      console.error('TCP 连接测试失败：', error)
+      tcpResult = `TCP 连接测试失败：${error instanceof Error ? error.message : String(error)}`
     }
     
     // 测试 TLS 连接
@@ -54,8 +54,8 @@ export async function GET() {
       const { stdout, stderr } = await execPromise(`openssl s_client -connect ${hostname}:5432 -tls1_2 -servername ${hostname} 2>&1 < /dev/null | grep "Verify return code" || echo "TLS 连接失败"`)
       tlsResult = stdout || stderr
     } catch (error) {
-      console.error('TLS 连接测试失败:', error)
-      tlsResult = `TLS 连接测试失败: ${error instanceof Error ? error.message : String(error)}`
+      console.error('TLS 连接测试失败：', error)
+      tlsResult = `TLS 连接测试失败：${error instanceof Error ? error.message : String(error)}`
     }
     
     return NextResponse.json({
@@ -70,11 +70,11 @@ export async function GET() {
       }
     })
   } catch (error) {
-    console.error('网络连接测试失败:', error)
+    console.error('网络连接测试失败：', error)
     
     return NextResponse.json({
       success: false,
-      message: `网络连接测试失败: ${error instanceof Error ? error.message : String(error)}`,
+      message: `网络连接测试失败：${error instanceof Error ? error.message : String(error)}`,
       data: {
         errorDetails: error instanceof Error ? {
           name: error.name,

@@ -2,7 +2,7 @@ import { Button } from "./ui/button"
 import Image from "next/image"
 import { UserDropdown } from "./user-dropdown"
 import { handleSignIn } from "@/app/actions"
-import { Avatar, AvatarFallback } from "./ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
 
 export function SignIn({
   provider,
@@ -42,12 +42,9 @@ export function UserAvatar({ user }: UserAvatarProps) {
   return (
     <Avatar className="h-10 w-10 border-2 border-primary/10">
       {user.image ? (
-        <Image 
+        <AvatarImage 
           src={user.image}
           alt={user.name || 'User avatar'}
-          width={40}
-          height={40}
-          className="rounded-full"
         />
       ) : (
         <AvatarFallback className="bg-primary/5">

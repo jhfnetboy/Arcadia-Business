@@ -72,6 +72,10 @@ export default function NewMerchantForm({
   const [location, setLocation] = useState(CHIANG_MAI)
   const [address, setAddress] = useState("")
   const [images, setImages] = useState<string[]>([])
+  const [formData, setFormData] = useState({
+    businessName: '',
+    description: ''
+  })
   const [geocoder, setGeocoder] = useState<google.maps.Geocoder | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -165,6 +169,14 @@ export default function NewMerchantForm({
     }
   }
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }))
+  }
+
   async function handleSubmit(formData: FormData) {
     try {
       setError(null)
@@ -172,6 +184,10 @@ export default function NewMerchantForm({
         setError("Please upload at least 3 images")
         return
       }
+
+      // Add form data values from state
+      formData.set("businessName", formData.get("businessName") as string || '')
+      formData.set("description", formData.get("description") as string || '')
 
       // Add images to form data
       for (const url of images) {
@@ -202,12 +218,24 @@ export default function NewMerchantForm({
           )}
           <div className="space-y-2">
             <Label htmlFor="businessName">Business Name</Label>
-            <Input id="businessName" name="businessName" required />
+            <Input 
+              id="businessName" 
+              name="businessName" 
+              value={formData.businessName}
+              onChange={handleInputChange}
+              required 
+            />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="description">Business Description</Label>
-            <Textarea id="description" name="description" required />
+            <Textarea 
+              id="description" 
+              name="description" 
+              value={formData.description}
+              onChange={handleInputChange}
+              required 
+            />
           </div>
 
           <div className="space-y-2">

@@ -86,7 +86,7 @@ export default async function HomePage() {
 
     const username = session.user.name || user.email.split('@')[0]
 
-    console.log("DATABASE_URL:", process.env.DATABASE_URL);
+    // console.log("DATABASE_URL:", process.env.DATABASE_URL);
 
     return (
       <div className="flex flex-col gap-6">

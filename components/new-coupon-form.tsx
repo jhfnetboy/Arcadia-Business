@@ -91,11 +91,7 @@ export default function NewCouponForm({
 
   async function handleSubmit(formData: FormData) {
     try {
-      if (!image) {
-        throw new Error("Please upload a coupon image")
-      }
-
-      formData.append("image", image)
+      formData.append("image", image || '/default-coupon.png')
       await onSubmit(formData)
     } catch (error) {
       console.error("Error submitting form:", error)
@@ -124,12 +120,17 @@ export default function NewCouponForm({
           </div>
 
           <div className="space-y-2">
-            <Label>Coupon Image</Label>
+            <Label>Coupon Image (Optional)</Label>
             <ImageUpload
               currentImage={image}
               onUpload={setImage}
               className="mt-2"
             />
+            {!image && (
+              <p className="text-sm text-muted-foreground">
+                If no image is uploaded, a default image will be used.
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -223,7 +224,7 @@ export default function NewCouponForm({
           <Button 
             type="submit" 
             className="w-full"
-            disabled={publishCost > (merchant?.pointsBalance ?? 0) || !image}
+            disabled={publishCost > (merchant?.pointsBalance ?? 0)}
           >
             Create Coupon
           </Button>

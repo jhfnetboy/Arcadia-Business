@@ -4,7 +4,7 @@ import type { PrismaClient } from '@prisma/client'
 
 export async function GET() {
   console.log('测试数据库连接 API 被调用')
-  console.log('DATABASE_URL:', process.env.DATABASE_URL)
+  // console.log('DATABASE_URL:', process.env.DATABASE_URL)
   
   try {
     // 尝试执行一个简单的查询来测试连接
@@ -20,11 +20,11 @@ export async function GET() {
       }
     })
   } catch (error) {
-    console.error('数据库连接测试失败:', error)
+    console.error('数据库连接测试失败：', error)
     
     return NextResponse.json({
       success: false,
-      message: `无法连接到数据库: ${error instanceof Error ? error.message : String(error)}`,
+      message: `无法连接到数据库：${error instanceof Error ? error.message : String(error)}`,
       data: {
         errorDetails: error instanceof Error ? {
           name: error.name,
