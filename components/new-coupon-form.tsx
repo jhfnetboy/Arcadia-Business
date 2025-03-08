@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { MerchantProfile, CouponCategory } from "@prisma/client"
 import { ImageUpload } from "./image-upload"
+import Image from "next/image"
+import { useRouter } from "next/navigation"
 
 interface NewCouponFormProps {
   categories: CouponCategory[]
@@ -42,10 +44,12 @@ export default function NewCouponForm({
   defaultDates, 
   onSubmit 
 }: NewCouponFormProps) {
+  const router = useRouter()
   const [selectedType, setSelectedType] = useState<string>('')
   const [quantity, setQuantity] = useState(1)
   const [publishCost, setPublishCost] = useState(0)
   const [image, setImage] = useState<string>('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Log promotion types when component mounts
   useEffect(() => {
@@ -91,11 +95,18 @@ export default function NewCouponForm({
 
   async function handleSubmit(formData: FormData) {
     try {
-      formData.append("image", image || '/default-coupon.png')
+      setIsSubmitting(true)
+      // If no image is uploaded, use the default image path
+      const imagePath = image || '/logo.png'
+      formData.append("image", imagePath)
       await onSubmit(formData)
+      router.push('/merchant/coupons')
+      router.refresh()
     } catch (error) {
       console.error("Error submitting form:", error)
       alert(error instanceof Error ? error.message : "An error occurred")
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -120,17 +131,32 @@ export default function NewCouponForm({
           </div>
 
           <div className="space-y-2">
-            <Label>Coupon Image (Optional)</Label>
-            <ImageUpload
-              currentImage={image}
-              onUpload={setImage}
-              className="mt-2"
-            />
-            {!image && (
-              <p className="text-sm text-muted-foreground">
-                If no image is uploaded, a default image will be used.
-              </p>
-            )}
+            <Label>Coupon Image</Label>
+            <div className="flex items-center gap-4">
+              {(image || '/logo.png') && (
+                <div className="relative w-32 h-32">
+                  <Image
+                    src={image || '/logo.png'}
+                    alt="Coupon image"
+                    fill
+                    className="object-cover rounded-lg"
+                    unoptimized
+                  />
+                </div>
+              )}
+              <div className="flex-1">
+                <ImageUpload
+                  currentImage={image}
+                  onUpload={setImage}
+                  className="mt-2"
+                />
+                {!image && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    If no image is uploaded, a default logo will be used.
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -224,9 +250,9 @@ export default function NewCouponForm({
           <Button 
             type="submit" 
             className="w-full"
-            disabled={publishCost > (merchant?.pointsBalance ?? 0)}
+            disabled={publishCost > (merchant?.pointsBalance ?? 0) || isSubmitting}
           >
-            Create Coupon
+            {isSubmitting ? 'Creating...' : 'Create Coupon'}
           </Button>
         </CardFooter>
       </Card>

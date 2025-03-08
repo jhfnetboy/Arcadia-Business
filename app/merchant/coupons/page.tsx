@@ -69,21 +69,15 @@ export default async function MerchantCouponsPage() {
         {coupons.map((coupon: CouponTemplateWithRelations) => (
           <div key={coupon.id} className="rounded-lg border p-6">
             <div className="flex items-start gap-6">
-              {coupon.image ? (
-                <div className="relative aspect-square w-32 overflow-hidden rounded-lg">
-                  <Image
-                    src={coupon.image}
-                    alt={coupon.name}
-                    className="object-cover"
-                    fill
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                  />
-                </div>
-              ) : (
-                <div className="relative aspect-square w-32 overflow-hidden rounded-lg bg-muted flex items-center justify-center">
-                  <span className="text-muted-foreground">No Image</span>
-                </div>
-              )}
+              <div className="relative aspect-square w-32 overflow-hidden rounded-lg">
+                <Image
+                  src={coupon.image || '/logo.png'}
+                  alt={coupon.name}
+                  className="object-cover"
+                  fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                />
+              </div>
               <div className="flex-1">
                 <div className="flex items-start justify-between">
                   <div>

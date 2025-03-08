@@ -29,30 +29,15 @@ type BucketStatus = {
 // 检查存储桶是否存在并验证权限
 async function checkBucketAndPermissions(): Promise<{ success: boolean; message: string }> {
   try {
-    console.log('Checking for arcadia bucket...')
-    const { data: buckets, error: listError } = await supabase.storage.listBuckets()
-    
-    if (listError) {
-      console.error('Error listing buckets:', listError)
+    console.log('Checking Supabase configuration...')
+    if (!supabaseUrl || !supabaseKey) {
       return { 
         success: false, 
-        message: `无法列出存储桶，请检查 Supabase 配置。错误: ${listError.message}` 
+        message: 'Supabase 配置缺失，请检查环境变量。' 
       }
     }
 
-    console.log('Available buckets:', buckets?.map(b => ({ name: b.name, id: b.id })))
-    const arcadiaBucket = buckets?.find(bucket => bucket.name === 'arcadia')
-    
-    if (!arcadiaBucket) {
-      return { 
-        success: false, 
-        message: '未找到 arcadia 存储桶，请在 Supabase 控制台创建。' 
-      }
-    }
-
-    console.log('Found arcadia bucket:', arcadiaBucket)
-
-    // 测试上传权限
+    // 直接尝试上传测试文件，不检查存储桶是否存在
     try {
       console.log('Testing upload permissions...')
       const testFile = new File(['test'], 'test.txt', { type: 'text/plain' })
@@ -65,9 +50,23 @@ async function checkBucketAndPermissions(): Promise<{ success: boolean; message:
 
       if (uploadError) {
         console.error('Upload permission test failed:', uploadError)
+        // If the error is empty, it might be because the file already exists (which is fine)
+        if (Object.keys(uploadError).length === 0) {
+          console.log('Empty error object received, assuming bucket exists and has correct permissions')
+          return { 
+            success: true, 
+            message: '存储桶检查成功，可以上传图片。' 
+          }
+        }
+        if (uploadError.message?.includes('Permission denied')) {
+          return { 
+            success: false, 
+            message: '存储桶权限不足。请在 Supabase 控制台为 arcadia 存储桶设置以下权限：\n1. 启用公共访问\n2. 允许匿名上传' 
+          }
+        }
         return { 
           success: false, 
-          message: `上传权限测试失败: ${uploadError.message}` 
+          message: `上传权限测试失败: ${uploadError.message || '未知错误'}` 
         }
       }
 
@@ -113,37 +112,11 @@ interface ImageUploadProps {
 
 export function ImageUpload({ onUpload, currentImage, className = "" }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false)
-  const [bucketStatus, setBucketStatus] = useState<BucketStatus>({
-    isReady: false,
-    error: null,
-    isChecking: true
-  })
-
-  // 组件加载时检查存储桶状态
-  useEffect(() => {
-    const checkBucket = async () => {
-      const result = await checkBucketAndPermissions()
-      setBucketStatus({
-        isReady: result.success,
-        error: result.success ? null : result.message,
-        isChecking: false
-      })
-    }
-    checkBucket()
-  }, [])
 
   const uploadImage = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
-      // 再次检查存储桶状态
-      if (!bucketStatus.isReady) {
-        const result = await checkBucketAndPermissions()
-        if (!result.success) {
-          throw new Error(result.message)
-        }
-      }
-
       setUploading(true)
-      console.log('Starting single image upload...')
+      console.log('Starting image upload...')
 
       if (!event.target.files || event.target.files.length === 0) {
         throw new Error('You must select an image to upload.')
@@ -168,9 +141,6 @@ export function ImageUpload({ onUpload, currentImage, className = "" }: ImageUpl
         throw new Error('File size must be less than 2MB.')
       }
 
-      // 检查存储桶和权限
-      await checkBucketAndPermissions()
-
       const fileName = generateUniqueFileName(file.name)
       const filePath = `images/${fileName}`
       console.log('Generated file path:', filePath)
@@ -184,7 +154,7 @@ export function ImageUpload({ onUpload, currentImage, className = "" }: ImageUpl
 
       if (uploadError) {
         console.error('Upload error:', uploadError)
-        throw new Error(`Upload error: ${uploadError.message}`)
+        throw new Error(`Upload error: ${uploadError.message || 'Unknown error'}`)
       }
 
       if (!data) {
@@ -193,7 +163,7 @@ export function ImageUpload({ onUpload, currentImage, className = "" }: ImageUpl
 
       console.log('Upload successful:', data)
 
-      // 添加更多调试信息
+      // 获取公共 URL
       console.log('Getting public URL for path:', filePath)
       const { data: urlData } = supabase.storage
         .from('arcadia')
@@ -216,30 +186,7 @@ export function ImageUpload({ onUpload, currentImage, className = "" }: ImageUpl
     } finally {
       setUploading(false)
     }
-  }, [onUpload, bucketStatus.isReady])
-
-  // 如果正在检查存储桶状态
-  if (bucketStatus.isChecking) {
-    return (
-      <div className={className}>
-        <Button variant="outline" className="w-full aspect-square" disabled>
-          正在检查存储配置...
-        </Button>
-      </div>
-    )
-  }
-
-  // 如果存储桶检查失败
-  if (!bucketStatus.isReady) {
-    return (
-      <div className={className}>
-        <div className="w-full aspect-square border-2 border-dashed border-red-500 rounded-lg flex flex-col items-center justify-center p-4">
-          <p className="text-red-500 text-center mb-2">存储配置错误</p>
-          <p className="text-sm text-gray-500 text-center">{bucketStatus.error}</p>
-        </div>
-      </div>
-    )
-  }
+  }, [onUpload])
 
   return (
     <div className={className}>

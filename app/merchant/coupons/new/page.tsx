@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client"
 const { Decimal } = Prisma
 import NewCouponForm from "@/components/new-coupon-form"
 import { logDatabaseUrl } from "@/lib/utils"
+import { supabase } from "@/lib/supabase"
 
 // Helper function to format date for display
 function formatDate(date: Date): string {
@@ -50,6 +51,11 @@ interface FormattedPromotionType {
   pay_type?: string
 }
 
+// Define the type for coupon template creation
+type CouponTemplateCreateData = Prisma.CouponTemplateCreateInput & {
+  image: string;
+}
+
 export default async function NewCouponPage() {
   console.log('开始加载新优惠券页面...')
   
@@ -79,6 +85,17 @@ export default async function NewCouponPage() {
   // 定义createCoupon函数在try块外面
   async function createCoupon(formData: FormData) {
     "use server"
+
+    const session = await auth()
+    if (!session?.user?.email) {
+      throw new Error("You must be logged in to create coupons")
+    }
+
+    // Get user profile
+    const userWithProfile = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      include: { merchantProfile: true }
+    })
 
     if (!userWithProfile?.merchantProfile) {
       throw new Error("Merchant profile not found")
@@ -159,6 +176,35 @@ export default async function NewCouponPage() {
       discountValue = Number((promotionType.defaultNum ?? 0).toFixed(2))
     }
 
+    // Create the coupon template data
+    const couponData: Prisma.CouponTemplateUncheckedCreateInput = {
+      merchantId: userWithProfile.merchantProfile.id,
+      categoryId,
+      name,
+      description: description || null,
+      image,
+      promotionType: type,
+      settings: {
+        affect: promotionType.affect,
+        calculate: promotionType.calculate,
+        num: promotionType.defaultNum,
+        condition: promotionType.condition,
+        requirePeopleNum: promotionType.requirePeopleNum,
+        timeLimit: promotionType.timeLimit,
+        payType: promotionType.payType,
+        payNum: promotionType.payNum
+      },
+      discountType,
+      discountValue: new Decimal(discountValue),
+      publishPrice: publishCost,
+      sellPrice: 30, // Default value
+      totalQuantity,
+      remainingQuantity: totalQuantity,
+      startDate,
+      endDate,
+      status: "active"
+    }
+
     // Use transaction to ensure data consistency:
     // 1. Create coupon template
     // 2. Deduct points from merchant balance
@@ -166,33 +212,7 @@ export default async function NewCouponPage() {
     await prisma.$transaction([
       // Create coupon template
       prisma.couponTemplate.create({
-        data: {
-          merchantId: userWithProfile.merchantProfile.id,
-          categoryId,
-          name,
-          description,
-          image,
-          promotionType: type,
-          settings: {
-            affect: promotionType.affect,
-            calculate: promotionType.calculate,
-            num: promotionType.defaultNum,
-            condition: promotionType.condition,
-            requirePeopleNum: promotionType.requirePeopleNum,
-            timeLimit: promotionType.timeLimit,
-            payType: promotionType.payType,
-            payNum: promotionType.payNum
-          },
-          discountType,
-          discountValue: new Decimal(discountValue),
-          publishPrice: publishCost,
-          sellPrice: 30, // Default value
-          totalQuantity,
-          remainingQuantity: totalQuantity,
-          startDate,
-          endDate,
-          status: "active"
-        }
+        data: couponData
       }),
       // Deduct total points from merchant balance
       prisma.merchantProfile.update({
