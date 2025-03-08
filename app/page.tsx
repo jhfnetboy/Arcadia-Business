@@ -17,7 +17,7 @@ export default async function HomePage() {
           <h1 className="text-3xl font-bold">Welcome to Arcadia Smart Business</h1>
           <h2 className="text-muted-foreground">Get New Customers by Web3</h2>
         </div>
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2">
           <div className="rounded-lg border p-6">
             <h2 className="text-xl font-semibold">For Merchants</h2>
             <p className="mt-2 text-muted-foreground">
@@ -40,18 +40,6 @@ export default async function HomePage() {
               className="mt-4 inline-block rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
             >
               Get Started
-            </Link>
-          </div>
-          <div className="rounded-lg border p-6">
-            <h2 className="text-xl font-semibold">For Developers</h2>
-            <p className="mt-2 text-muted-foreground">
-              Integrate our API to build custom solutions for your business.
-            </p>
-            <Link 
-              href="/docs"
-              className="mt-4 inline-block rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
-            >
-              View Documentation
             </Link>
           </div>
         </div>
