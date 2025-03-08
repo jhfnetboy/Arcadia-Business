@@ -57,10 +57,10 @@ type CouponTemplateCreateData = Prisma.CouponTemplateCreateInput & {
 }
 
 export default async function NewCouponPage() {
-  console.log('开始加载新优惠券页面...')
+  // console.log('开始加载新优惠券页面...')
   
-  // 安全地记录数据库URL
-  logDatabaseUrl(process.env.DATABASE_URL || '', '新优惠券页面 DATABASE_URL')
+  // 安全地记录数据库 URL
+  // logDatabaseUrl(process.env.DATABASE_URL || '', '新优惠券页面 DATABASE_URL')
   
   const session = await auth()
   const user = session?.user
@@ -75,14 +75,14 @@ export default async function NewCouponPage() {
     where: { email: user.email },
     include: { merchantProfile: true }
   })
-  console.log('用户商家资料查询结果:', userWithProfile ? '成功' : '失败')
+  console.log('用户商家资料查询结果：', userWithProfile ? '成功' : '失败')
 
   if (!userWithProfile?.merchantProfile) {
     console.log('用户没有商家资料，重定向到创建商家页面')
     redirect("/merchant/new")
   }
 
-  // 定义createCoupon函数在try块外面
+  // 定义 createCoupon 函数在 try 块外面
   async function createCoupon(formData: FormData) {
     "use server"
 
@@ -318,13 +318,13 @@ export default async function NewCouponPage() {
       </div>
     )
   } catch (error) {
-    console.error('加载页面时出错:', error)
+    console.error('加载页面时出错：', error)
     return (
       <div className="container max-w-2xl py-8">
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" role="alert">
-          <strong className="font-bold">加载错误!</strong>
+          <strong className="font-bold">加载错误！</strong>
           <span className="block sm:inline"> 无法加载优惠券分类或促销类型。请稍后再试。</span>
-          <p className="mt-2 text-sm">错误详情: {error instanceof Error ? error.message : String(error)}</p>
+          <p className="mt-2 text-sm">错误详情：{error instanceof Error ? error.message : String(error)}</p>
         </div>
       </div>
     )
