@@ -130,6 +130,7 @@ model CouponTemplate {
   categoryId        String          @map("category_id")
   name              String
   description       String?
+  image             String?
   discountType      String          @map("discount_type")
   discountValue     Decimal         @map("discount_value")
   totalQuantity     Int             @map("total_quantity")

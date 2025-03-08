@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { MerchantProfile, CouponCategory } from "@prisma/client"
+import { ImageUpload } from "./image-upload"
 
 interface NewCouponFormProps {
   categories: CouponCategory[]
@@ -42,8 +43,9 @@ export default function NewCouponForm({
   onSubmit 
 }: NewCouponFormProps) {
   const [selectedType, setSelectedType] = useState<string>('')
-  const [quantity, setQuantity] = useState<number>(1)
-  const [publishCost, setPublishCost] = useState<number>(0)
+  const [quantity, setQuantity] = useState(1)
+  const [publishCost, setPublishCost] = useState(0)
+  const [image, setImage] = useState<string>('')
 
   // Log promotion types when component mounts
   useEffect(() => {
@@ -78,13 +80,31 @@ export default function NewCouponForm({
   }
 
   const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = Number.parseInt(e.target.value, 10) || 1 // Default to 1 instead of 0
-    console.log('Quantity changed to:', value)
-    setQuantity(Math.max(1, value)) // Ensure minimum value is 1
+    const newQuantity = Number.parseInt(e.target.value, 10) || 0
+    console.log('Quantity changed to:', newQuantity)
+    setQuantity(Math.max(1, newQuantity)) // Ensure minimum value is 1
+    const promotionType = promotionTypes.find(pt => pt.type === selectedType)
+    if (promotionType) {
+      setPublishCost(promotionType.basePoints * newQuantity)
+    }
+  }
+
+  async function handleSubmit(formData: FormData) {
+    try {
+      if (!image) {
+        throw new Error("Please upload a coupon image")
+      }
+
+      formData.append("image", image)
+      await onSubmit(formData)
+    } catch (error) {
+      console.error("Error submitting form:", error)
+      alert(error instanceof Error ? error.message : "An error occurred")
+    }
   }
 
   return (
-    <form action={onSubmit}>
+    <form action={handleSubmit}>
       <Card>
         <CardHeader>
           <CardTitle>Issue New Coupon</CardTitle>
@@ -101,6 +121,15 @@ export default function NewCouponForm({
           <div className="space-y-2">
             <Label htmlFor="description">Description</Label>
             <Textarea id="description" name="description" required />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Coupon Image</Label>
+            <ImageUpload
+              currentImage={image}
+              onUpload={setImage}
+              className="mt-2"
+            />
           </div>
 
           <div className="space-y-2">
@@ -194,7 +223,7 @@ export default function NewCouponForm({
           <Button 
             type="submit" 
             className="w-full"
-            disabled={publishCost > (merchant?.pointsBalance ?? 0)}
+            disabled={publishCost > (merchant?.pointsBalance ?? 0) || !image}
           >
             Create Coupon
           </Button>

@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { useLoadScript, GoogleMap, Marker } from "@react-google-maps/api"
 import { useFormStatus } from "react-dom"
+import { MultipleImageUpload } from "./image-upload"
 
 // Chiang Mai coordinates
 const CHIANG_MAI = { lat: 18.7883, lng: 98.9853 }
@@ -171,6 +172,12 @@ export default function NewMerchantForm({
         setError("Please upload at least 3 images")
         return
       }
+
+      // Add images to form data
+      for (const url of images) {
+        formData.append("images", url)
+      }
+
       await onSubmit(formData)
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred while registering")
@@ -238,39 +245,13 @@ export default function NewMerchantForm({
           </div>
 
           <div className="space-y-2">
-            <Label>Business Images (at least 3, max 5MB each)</Label>
-            <Input
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={handleImageUpload}
-              required
-              disabled={isProcessing}
+            <Label>Business Images (at least 3)</Label>
+            <MultipleImageUpload
+              currentImages={images}
+              onUpload={setImages}
+              maxImages={10}
+              className="mt-2"
             />
-            {isProcessing && (
-              <div className="text-sm text-muted-foreground">
-                Processing images...
-              </div>
-            )}
-            <div className="grid grid-cols-3 gap-2">
-              {images.map((url) => (
-                <div key={url} className="relative aspect-square">
-                  <img
-                    src={url}
-                    alt="Business location view"
-                    className="absolute inset-0 h-full w-full rounded-md object-cover"
-                  />
-                </div>
-              ))}
-            </div>
-            {images.map((url) => (
-              <input
-                key={url}
-                type="hidden"
-                name="images"
-                value={url}
-              />
-            ))}
           </div>
         </CardContent>
         <CardFooter>

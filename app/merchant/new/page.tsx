@@ -1,7 +1,6 @@
 import { auth } from "auth"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
-import { saveImage } from "@/lib/upload"
 import NewMerchantForm from "@/components/new-merchant-form"
 
 export default async function NewMerchantPage() {
@@ -51,14 +50,11 @@ export default async function NewMerchantPage() {
     const description = formData.get("description") as string
     const address = formData.get("address") as string
     const location = formData.get("location") as string
-    const imageData = formData.getAll("images") as string[]
+    const imageUrls = formData.getAll("images") as string[]
 
-    if (!businessName || !description || !address || !location || imageData.length < 3) {
+    if (!businessName || !description || !address || !location || imageUrls.length < 3) {
       throw new Error("Please fill in all required fields and upload at least 3 images")
     }
-
-    // Save images and get their URLs
-    const imageUrls = await Promise.all(imageData.map(saveImage))
 
     await prisma.merchantProfile.create({
       data: {

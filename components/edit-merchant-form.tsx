@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { useLoadScript, GoogleMap, Marker } from "@react-google-maps/api"
 import type { MerchantProfile } from "@prisma/client"
+import { MultipleImageUpload } from "./image-upload"
 
 const libraries: ("places")[] = ["places"]
 
@@ -76,17 +77,26 @@ export default function EditMerchantForm({ merchant, onSubmit }: EditMerchantFor
     }
   }
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files) return
-    
-    // Here you would normally upload the files to your storage service
-    // For now, we'll just create data URLs
-    const newImages = Array.from(e.target.files).map(file => URL.createObjectURL(file))
-    setImages([...images, ...newImages])
+  async function handleSubmit(formData: FormData) {
+    try {
+      if (images.length < 3) {
+        throw new Error("Please upload at least 3 images")
+      }
+      
+      // Add images to form data
+      for (const url of images) {
+        formData.append("images", url)
+      }
+      
+      await onSubmit(formData)
+    } catch (error) {
+      console.error("Error submitting form:", error)
+      alert(error instanceof Error ? error.message : "An error occurred")
+    }
   }
 
   return (
-    <form action={onSubmit}>
+    <form action={handleSubmit}>
       <Card>
         <CardHeader>
           <CardTitle>Edit Business Profile</CardTitle>
@@ -151,31 +161,12 @@ export default function EditMerchantForm({ merchant, onSubmit }: EditMerchantFor
 
           <div className="space-y-2">
             <Label>Business Images (at least 3)</Label>
-            <Input
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={handleImageUpload}
+            <MultipleImageUpload
+              currentImages={images}
+              onUpload={setImages}
+              maxImages={10}
+              className="mt-2"
             />
-            <div className="grid grid-cols-3 gap-2">
-              {images.map((url) => (
-                <div key={url} className="relative aspect-square">
-                  <img
-                    src={url}
-                    alt="Business location view"
-                    className="absolute inset-0 h-full w-full rounded-md object-cover"
-                  />
-                </div>
-              ))}
-            </div>
-            {images.map((url) => (
-              <input
-                key={url}
-                type="hidden"
-                name="images"
-                value={url}
-              />
-            ))}
           </div>
         </CardContent>
         <CardFooter>

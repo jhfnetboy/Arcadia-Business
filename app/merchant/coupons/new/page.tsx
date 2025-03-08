@@ -90,6 +90,7 @@ export default async function NewCouponPage() {
     const type = formData.get("type") as string
     const totalQuantity = Number.parseInt(formData.get("totalQuantity") as string, 10)
     const publishCost = Number.parseInt(formData.get("publishCost") as string, 10)
+    const image = formData.get("image") as string
     
     // Parse dates with timezone consideration
     const startDateStr = formData.get("startDate") as string
@@ -107,8 +108,8 @@ export default async function NewCouponPage() {
     const minStartDate = new Date(now.getTime() - 5 * 60 * 1000)
 
     // Validate required fields
-    if (!name || !description || !categoryId || !type || !totalQuantity || !publishCost) {
-      throw new Error("Please fill in all required fields")
+    if (!name || !description || !categoryId || !type || !totalQuantity || !publishCost || !image) {
+      throw new Error("Please fill in all required fields and upload an image")
     }
 
     // Validate numeric values with friendly messages
@@ -170,6 +171,7 @@ export default async function NewCouponPage() {
           categoryId,
           name,
           description,
+          image,
           promotionType: type,
           settings: {
             affect: promotionType.affect,
