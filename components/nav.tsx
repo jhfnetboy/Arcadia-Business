@@ -38,7 +38,7 @@ export default async function Nav() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem asChild>
-                  <Link href="/auth/signout">Sign Out</Link>
+                  <Link href="/auth/signout">Sign Out 2</Link>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

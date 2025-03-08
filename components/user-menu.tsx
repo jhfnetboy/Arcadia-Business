@@ -1,7 +1,7 @@
 'use client'
 
 import Link from "next/link"
-import { UserAvatar } from "./user-avatar"
+import Image from "next/image"
 import { Button } from "./ui/button"
 import {
   DropdownMenu,
@@ -28,11 +28,17 @@ export function UserMenu({ user }: UserMenuProps) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-          <UserAvatar 
-            src={user.image} 
-            alt={user.name || 'User avatar'}
-            size={40}
-          />
+          {user.image && (
+            <div className="relative w-10 h-10">
+              <Image 
+                src={user.image}
+                alt={user.name || 'User avatar'}
+                width={40}
+                height={40}
+                className="rounded-full"
+              />
+            </div>
+          )}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
@@ -48,18 +54,18 @@ export function UserMenu({ user }: UserMenuProps) {
             )}
           </div>
         </div>
-        <DropdownMenuItem asChild>
-          <Link href="/claim" className="w-full">
-            Claim Points
+        <DropdownMenuItem>
+          <Link href="/claim">
+            Claim PNTs
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/profile" className="w-full">
+        <DropdownMenuItem>
+          <Link href="/profile">
             Profile
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={handleSignOut}>
-          Sign Out
+          Sign Out 3
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

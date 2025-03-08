@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { auth } from "@/auth"
 import { Button } from "@/components/ui/button"
-import { UserMenu } from "@/components/user-menu"
+import { SignOut } from "@/components/auth-components"
 
 export async function SiteHeader() {
   const session = await auth()
@@ -29,7 +29,7 @@ export async function SiteHeader() {
 
         <div className="flex items-center space-x-4">
           {session?.user ? (
-            <UserMenu user={session.user} />
+            <SignOut user={session.user} />
           ) : (
             <Link href="/api/auth/signin">
               <Button variant="ghost">Sign In</Button>

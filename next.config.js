@@ -11,7 +11,8 @@ const nextConfig = {
       'avatars.githubusercontent.com', // GitHub头像
       'platform-lookaside.fbsbx.com', // Facebook头像
       'pbs.twimg.com', // Twitter头像
-      'cdn.discordapp.com' // Discord头像
+      'cdn.discordapp.com', // Discord头像
+      'api.dicebear.com' // DiceBear API
     ]
   }
 }

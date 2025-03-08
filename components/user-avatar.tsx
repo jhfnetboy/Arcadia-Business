@@ -9,10 +9,14 @@ interface UserAvatarProps {
 }
 
 export function UserAvatar({ src, alt, size = 50 }: UserAvatarProps) {
+  if (!src) {
+    return null
+  }
+
   return (
     <div className="relative" style={{ width: size, height: size }}>
       <Image 
-        src={src || '/default-avatar.png'} 
+        src={src} 
         alt={alt}
         width={size}
         height={size}
