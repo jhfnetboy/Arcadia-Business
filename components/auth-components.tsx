@@ -2,6 +2,7 @@ import { Button } from "./ui/button"
 import Image from "next/image"
 import { UserDropdown } from "./user-dropdown"
 import { handleSignIn } from "@/app/actions"
+import { Avatar, AvatarFallback } from "./ui/avatar"
 
 export function SignIn({
   provider,
@@ -23,22 +24,37 @@ interface UserAvatarProps {
   }
 }
 
+// 获取用户名或邮箱的首字母
+function getInitials(name?: string | null, email?: string | null): string {
+  if (name) {
+    return name.charAt(0).toUpperCase()
+  }
+  if (email) {
+    return email.charAt(0).toUpperCase()
+  }
+  return '?'
+}
+
 // Server component for avatar display
 export function UserAvatar({ user }: UserAvatarProps) {
-  const avatarUrl = user.image || `https://api.dicebear.com/7.x/initials/svg?seed=${user.email || 'guest'}`
+  const initials = getInitials(user.name, user.email)
   
   return (
-    <div className="relative w-10 h-10">
-      {avatarUrl && (
+    <Avatar className="h-10 w-10 border-2 border-primary/10">
+      {user.image ? (
         <Image 
-          src={avatarUrl}
+          src={user.image}
           alt={user.name || 'User avatar'}
           width={40}
           height={40}
           className="rounded-full"
         />
+      ) : (
+        <AvatarFallback className="bg-primary/5">
+          {initials}
+        </AvatarFallback>
       )}
-    </div>
+    </Avatar>
   )
 }
 
