@@ -1,11 +1,20 @@
-import { auth } from "@/auth"
-import { redirect } from "next/navigation"
-import { prisma } from "@/lib/prisma"
+'use client'
+
+import { useEffect, useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import WriteOffForm from "@/components/write-off-form"
 
-// 首先定义一个 CouponType 接口
+interface VerificationResult {
+  status: string
+  isExpired: boolean
+  daysLeft: number
+  merchantName: string
+  startDate: string
+  endDate: string
+}
+
 interface CouponType {
   totalQuantity: number
   remainingQuantity: number
@@ -15,226 +24,148 @@ interface CouponType {
   }[]
 }
 
-export default async function MerchantDashboard() {
-  const session = await auth()
-  if (!session?.user?.email) {
-    redirect("/auth/signin?callbackUrl=/merchant")
-    return
+interface Stats {
+  pointsBalance: number
+  totalCoupons: {
+    types: number
+    quantity: number
   }
+  activeCoupons: {
+    types: number
+    quantity: number
+  }
+  redeemedCoupons: number
+}
 
-  // Get user with merchant profile
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-    include: {
-      merchantProfile: {
-        include: {
-          coupons: {
-            include: {
-              issuedCoupons: true
-            }
+interface MerchantData {
+  user: {
+    merchantProfile: {
+      businessName: string
+      description: string
+    }
+  }
+  stats: Stats
+}
+
+interface CouponCheckResult {
+  id: string
+  name: string
+  description: string
+  playerName: string
+  playerEmail: string
+  promotionType: string
+  discountType: string
+  discountValue: number
+  status: string
+  createdAt: string
+  expiresAt: string
+}
+
+export default function MerchantDashboard() {
+  const router = useRouter()
+  const [code, setCode] = useState('')
+  const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null)
+  const [error, setError] = useState('')
+  const [data, setData] = useState<MerchantData | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const response = await fetch('/api/merchant/profile')
+        const result = await response.json()
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            router.push("/auth/signin?callbackUrl=/merchant")
+            return
           }
+          throw new Error(result.error || "Failed to load merchant profile")
         }
+
+        setData(result)
+      } catch (error) {
+        console.error("Error loading data:", error)
+        setError(error instanceof Error ? error.message : "Failed to load data")
+      } finally {
+        setLoading(false)
       }
     }
-  })
 
-  // If no user found, redirect to homepage
-  if (!user) {
-    throw new Error("User is not logged in. Please log in first.")
-  }
+    loadData()
+  }, [router])
 
-  // If no merchant profile, redirect to new merchant page
-  if (!user.merchantProfile) {
-    redirect("/merchant/new")
-  }
-
-  const stats = {
-    pointsBalance: user.merchantProfile.pointsBalance,
-    totalCoupons: {
-      types: user.merchantProfile.coupons.length,
-      quantity: user.merchantProfile.coupons.reduce(
-        (acc: number, t: CouponType) => acc + t.totalQuantity, 
-        0
-      )
-    },
-    activeCoupons: {
-      types: user.merchantProfile.coupons.filter(
-        (t: CouponType) => t.status === 'active'
-      ).length,
-      quantity: user.merchantProfile.coupons
-        .filter((t: CouponType) => t.status === 'active')
-        .reduce(
-          (acc: number, t: CouponType) => acc + t.remainingQuantity, 
-          0
-        )
-    },
-    redeemedCoupons: user.merchantProfile.coupons.reduce(
-      (acc: number, t: CouponType) => 
-        acc + t.issuedCoupons.filter(
-          (ic: { status: string }) => ic.status === 'used'
-        ).length, 
-      0
-    )
-  }
-
-  async function checkCoupon(formData: FormData) {
-    "use server"
-    
-    const session = await auth()
-    if (!session?.user?.email) {
-      throw new Error("You must be logged in to check coupons")
+  const handleVerify = async () => {
+    if (!code) {
+      setError('Please enter a coupon code')
+      return
     }
 
-    // 重新获取用户信息
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      include: { merchantProfile: true }
-    })
-
-    if (!user || !user.merchantProfile) {
-      throw new Error("Merchant profile not found")
-    }
-    
-    const passcode = formData.get("passcode")
-    if (!passcode || typeof passcode !== "string") {
-      throw new Error("Please enter a valid coupon code")
-    }
-
-    const coupon = await prisma.issuedCoupon.findUnique({
-      where: { passCode: passcode },
-      include: {
-        template: {
-          include: {
-            merchant: true,
-          }
-        },
-        user: true
-      }
-    })
-
-    if (!coupon) {
-      throw new Error("Coupon not found. Please check the code and try again")
-    }
-
-    const merchantProfileId = user.merchantProfile.id
-    if (coupon.template.merchantId !== merchantProfileId) {
-      throw new Error("This coupon was not issued by your store")
-    }
-
-    if (coupon.status === "used") {
-      const usedTime = coupon.usedAt?.toLocaleString() ?? "unknown time"
-      throw new Error(`This coupon has already been redeemed at ${usedTime}`)
-    }
-
-    const now = new Date()
-    const endDate = new Date(coupon.template.endDate)
-    if (now > endDate) {
-      const timeAgo = Math.floor((now.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24))
-      throw new Error(`This coupon expired ${timeAgo} days ago (Expiry: ${endDate.toLocaleString()})`)
-    }
-
-    return {
-      id: coupon.id,
-      name: coupon.template.name,
-      description: coupon.template.description || "",
-      playerName: coupon.user.name || "",
-      playerEmail: coupon.user.email || "",
-      promotionType: coupon.template.promotionType,
-      discountType: coupon.template.discountType,
-      discountValue: Number(coupon.template.discountValue),
-      status: coupon.status,
-      createdAt: coupon.createdAt.toISOString(),
-      expiresAt: coupon.template.endDate.toISOString(),
-    }
-  }
-
-  async function redeemCoupon(id: string) {
-    "use server"
-
-    const session = await auth()
-    if (!session?.user?.email) {
-      throw new Error("You must be logged in to redeem coupons")
-    }
-
-    // 重新获取用户信息
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      include: { merchantProfile: true }
-    })
-
-    if (!user || !user.merchantProfile) {
-      throw new Error("Merchant profile not found")
-    }
-
-    const coupon = await prisma.issuedCoupon.findUnique({
-      where: { id },
-      include: {
-        template: true,
-        user: true
-      }
-    })
-
-    if (!coupon) {
-      throw new Error("Coupon not found")
-    }
-
-    const merchantProfileId = user.merchantProfile.id
-    if (coupon.template.merchantId !== merchantProfileId) {
-      throw new Error("This coupon was not issued by your store")
-    }
-
-    if (coupon.status === "used") {
-      const usedTime = coupon.usedAt?.toLocaleString() ?? "unknown time"
-      throw new Error(`This coupon has already been redeemed at ${usedTime}`)
-    }
-
-    const now = new Date()
-    const endDate = new Date(coupon.template.endDate)
-    if (now > endDate) {
-      const timeAgo = Math.floor((now.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24))
-      throw new Error(`This coupon expired ${timeAgo} days ago (Expiry: ${endDate.toLocaleString()})`)
-    }
-
-    // 使用事务来确保数据一致性
-    await prisma.$transaction([
-      // 更新优惠券状态
-      prisma.issuedCoupon.update({
-        where: { id },
-        data: { 
-          status: "used",
-          usedAt: now
-        },
-      }),
-      // 创建交易记录
-      prisma.transaction.create({
-        data: {
-          userId: coupon.userId,
-          merchantId: coupon.template.merchantId,
-          type: "write_off",
-          amount: Number(coupon.template.sellPrice),
-          status: "completed",
-          couponId: coupon.template.id,
-          quantity: 1
-        }
-      })
-    ])
-  }
-
-  // 创建一个新的函数用于表单提交
-  async function handleCouponCheck(formData: FormData) {
-    "use server"
-    
     try {
-      // 调用原来的 checkCoupon 函数获取优惠券信息
-      const couponDetails = await checkCoupon(formData)
-      // 这里可以添加处理逻辑，比如存储到服务器状态或重定向
-      // 但不返回任何值
+      const response = await fetch('/api/verify-coupon', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code }),
+      })
+
+      const result = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to verify coupon')
+      }
+
+      setVerificationResult(result)
+      setError('')
     } catch (error) {
-      // 处理错误
-      console.error("Error checking coupon:", error)
+      setError(error instanceof Error ? error.message : 'Failed to verify coupon')
+      setVerificationResult(null)
     }
-    // 不返回任何值，符合 form action 的要求
   }
+
+  const checkCoupon = async (formData: FormData) => {
+    const code = formData.get('passcode')
+    if (!code || typeof code !== 'string') {
+      throw new Error('Please enter a valid coupon code')
+    }
+
+    const response = await fetch('/api/write-off', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ action: 'check', code }),
+    })
+
+    const result = await response.json()
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to check coupon')
+    }
+
+    return result as CouponCheckResult
+  }
+
+  const redeemCoupon = async (id: string) => {
+    const response = await fetch('/api/write-off', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ action: 'redeem', id }),
+    })
+
+    const result = await response.json()
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to redeem coupon')
+    }
+  }
+
+  if (loading || !data) {
+    return <div>Loading...</div>
+  }
+
+  const { user, stats } = data
 
   return (
     <div className="flex flex-col gap-6">
@@ -277,14 +208,14 @@ export default async function MerchantDashboard() {
           <div className="mt-1 text-2xl font-bold">{stats.activeCoupons.quantity}</div>
           <div className="text-sm text-muted-foreground">({stats.activeCoupons.types} types)</div>
         </div>
-        <div className="rounded-lg border p-4Write Off">
+        <div className="rounded-lg border p-4">
           <div className="text-sm text-muted-foreground">Redeemed Coupons</div>
           <div className="mt-1 text-2xl font-bold">{stats.redeemedCoupons}</div>
         </div>
       </div>
 
       <div className="rounded-lg border p-6">
-        <h2 className="mb-4 text-lg font-semibold"> Coupons</h2>
+        <h2 className="mb-4 text-lg font-semibold">Write Off Coupons</h2>
         <WriteOffForm checkCoupon={checkCoupon} redeemCoupon={redeemCoupon} />
       </div>
 
@@ -293,16 +224,49 @@ export default async function MerchantDashboard() {
           <h2 className="text-lg font-semibold">Verify Coupon</h2>
         </div>
         <div className="p-4">
-          <form action={handleCouponCheck} className="flex gap-2">
-            <input
-              type="text"
-              name="passcode"
-              placeholder="Enter coupon code"
-              className="flex-1 px-3 py-2 border rounded-md"
-              required
-            />
-            <Button type="submit">Verify</Button>
-          </form>
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Enter coupon code"
+                className="flex-1 px-3 py-2 border rounded-md"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+              />
+              <Button onClick={handleVerify}>Verify</Button>
+            </div>
+            
+            {verificationResult && (
+              <div className="mt-4 p-4 border rounded-md space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Status:</span>
+                  <span className="font-medium">{verificationResult.status}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Merchant:</span>
+                  <span className="font-medium">{verificationResult.merchantName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Valid Period:</span>
+                  <span className="font-medium">
+                    {new Date(verificationResult.startDate).toLocaleDateString()} - {new Date(verificationResult.endDate).toLocaleDateString()}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Time Left:</span>
+                  <span className={`font-medium ${verificationResult.isExpired ? 'text-red-500' : 'text-green-500'}`}>
+                    {verificationResult.isExpired ? 'Expired' : `${verificationResult.daysLeft} days`}
+                  </span>
+                </div>
+              </div>
+            )}
+            
+            {error && (
+              <div className="mt-4 p-4 border rounded-md bg-red-50 text-red-600">
+                {error}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
