@@ -418,6 +418,51 @@ npx prisma migrate dev --name add_image_to_coupon_temp
 3. 兑换结果：我买到了多少（数量）
    1. 统计所有当前 userId 在 Transaction 表的 type 为 buy_coupon，buy_equipment，buy_skill，buy_nft 的记录汇总
 
+### 统计查询函数 getUserStats
+
+商家统计：
+积分余额：直接从 merchantProfile.pointsBalance 获取
+发行的优惠券总量：统计 CouponTemplate 表中该商家的 totalQuantity 总和
+已使用的优惠券：统计 Transaction 表中 type="write_off" 的记录数
+
+玩家统计：
+积分余额：直接从 playerProfile.pointsBalance 获取
+已用积分购物所得：统计所有类型为 buy_coupon、buy_equipment、buy_skill、buy_nft 的记录数
+已使用的优惠券：统计 IssuedCoupon 表中 status="used" 的记录数
+
+
+### 核销过程
+改动说明：
+核销流程改进：
+在 redeemCoupon 函数中添加了创建 Transaction 记录的逻辑
+使用 prisma.$transaction 确保优惠券状态更新和交易记录创建的原子性
+设置交易类型为 "write_off"
+使用优惠券的面值作为交易金额
+添加了 merchantId 字段，使用商家的 userId
+数据完整性：
+在查询优惠券时增加了 user 关联，以获取用户信息
+使用事务确保数据一致性，避免部分操作失败的情况
+流程说明：
+核销优惠券的入口是 WriteOffForm 组件中的 "Redeem" 按钮
+验证优惠券的入口是页面底部的 "Verify" 按钮
+完整流程是：先验证优惠券 -> 显示优惠券详情 -> 确认核销 -> 创建交易记录
+这样修改后，每次核销优惠券时都会：
+更新优惠券状态为 "used"
+记录使用时间
+创建一条类型为 "write_off" 的交易记录
+关联商家 ID 和用户 ID
+记录交易金额（优惠券面值）
+这样就能正确追踪优惠券的使用情况和商家的核销记录。
+
+有一个问题：
+Transaction 表中存在 merchantId，String          @map("merchant_id") 和 merchant，User            @relation("MerchantTransactions", fields: [merchantId], references: [id])
+这两个字段我观察是重复了，我计划保留 merchantId，因为 merchantId 是唯一标识，而 merchant 是关联的 User 对象，User 对象中也有 id 字段，所以可以保留 merchantId，然后删除 merchant 字段
+请帮我完成这个修改，并给出修改后的代码，
+包括但不限于
+1. imigration 文件的生成和执行，
+2. 检查所有和交易相关的页面的代码执行是否需要修改
+3. 在核销页面，需要新增 type 为 write_off 的记录，并关联到对应的 CouponTemplate 和 IssuedCoupon
+
 
 
 

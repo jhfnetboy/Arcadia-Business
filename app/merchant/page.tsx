@@ -170,6 +170,7 @@ export default async function MerchantDashboard() {
       where: { id },
       include: {
         template: true,
+        user: true
       }
     })
 
@@ -194,13 +195,29 @@ export default async function MerchantDashboard() {
       throw new Error(`This coupon expired ${timeAgo} days ago (Expiry: ${endDate.toLocaleString()})`)
     }
 
-    await prisma.issuedCoupon.update({
-      where: { id },
-      data: { 
-        status: "used",
-        usedAt: now
-      },
-    })
+    // 使用事务来确保数据一致性
+    await prisma.$transaction([
+      // 更新优惠券状态
+      prisma.issuedCoupon.update({
+        where: { id },
+        data: { 
+          status: "used",
+          usedAt: now
+        },
+      }),
+      // 创建交易记录
+      prisma.transaction.create({
+        data: {
+          userId: coupon.userId,
+          merchantId: coupon.template.merchantId,
+          type: "write_off",
+          amount: Number(coupon.template.sellPrice),
+          status: "completed",
+          couponId: coupon.template.id,
+          quantity: 1
+        }
+      })
+    ])
   }
 
   // 创建一个新的函数用于表单提交
@@ -260,14 +277,14 @@ export default async function MerchantDashboard() {
           <div className="mt-1 text-2xl font-bold">{stats.activeCoupons.quantity}</div>
           <div className="text-sm text-muted-foreground">({stats.activeCoupons.types} types)</div>
         </div>
-        <div className="rounded-lg border p-4">
+        <div className="rounded-lg border p-4Write Off">
           <div className="text-sm text-muted-foreground">Redeemed Coupons</div>
           <div className="mt-1 text-2xl font-bold">{stats.redeemedCoupons}</div>
         </div>
       </div>
 
       <div className="rounded-lg border p-6">
-        <h2 className="mb-4 text-lg font-semibold">Write Off Coupons</h2>
+        <h2 className="mb-4 text-lg font-semibold"> Coupons</h2>
         <WriteOffForm checkCoupon={checkCoupon} redeemCoupon={redeemCoupon} />
       </div>
 

@@ -9,7 +9,7 @@ import { getUserStats } from "@/lib/queries/user-stats"
 
 export default async function HomePage() {
   const session = await auth()
-  const { user, userStats } = await getUserStats(session?.user?.email || '')
+  const { user, userStats } = await getUserStats(session?.user?.email)
 
   // If not signed in, show welcome page
   if (!session?.user?.email) {
@@ -73,11 +73,20 @@ export default async function HomePage() {
       <div className="grid gap-4 md:grid-cols-2">
         {user?.merchantProfile && (
           <div className="rounded-lg border p-6">
-            <h2 className="text-2xl font-semibold mb-4">Merchant Stats</h2>
+            <h2 className="text-2xl font-semibold mb-4">Merchant Dashboard</h2>
             <div className="space-y-2">
-              <p>Points Balance: {userStats.merchant.pointsBalance} PNTs</p>
-              <p>Total Issued Coupons: {userStats.merchant.totalCoupons}</p>
-              <p>Used Coupons: {userStats.merchant.usedCoupons}</p>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Points Balance:</span>
+                <span className="font-medium">{userStats.merchant.pointsBalance} PNTs</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Total Issued Coupons:</span>
+                <span className="font-medium">{userStats.merchant.totalCoupons}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Used Coupons:</span>
+                <span className="font-medium">{userStats.merchant.usedCoupons}</span>
+              </div>
             </div>
             <div className="mt-4">
               <Button asChild variant="outline">
@@ -89,11 +98,23 @@ export default async function HomePage() {
 
         {user?.playerProfile && (
           <div className="rounded-lg border p-6">
-            <h2 className="text-2xl font-semibold mb-4">Player Stats</h2>
+            <h2 className="text-2xl font-semibold mb-4">Player Dashboard</h2>
             <div className="space-y-2">
-              <p>Points Balance: {userStats.player.pointsBalance} PNTs</p>
-              <p>Total Coupons: {userStats.player.totalCoupons}</p>
-              <p>Used Coupons: {userStats.player.usedCoupons}</p>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Points Balance:</span>
+                <span className="font-medium">{userStats.player.pointsBalance} PNTs</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Total Purchases:</span>
+                <span className="font-medium">{userStats.player.totalPurchases}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Used Coupons:</span>
+                <span className="font-medium">{userStats.player.usedCoupons}</span>
+              </div>
+              <div className="mt-2 text-sm text-muted-foreground">
+                <p>* Total Purchases includes all coupons, equipment, skills, and NFTs</p>
+              </div>
             </div>
             <div className="mt-4">
               <Button asChild variant="outline">
@@ -124,7 +145,7 @@ export default async function HomePage() {
       <div className="rounded-lg border p-6">
         <h2 className="text-2xl font-semibold mb-4">Explore Town</h2>
         <p className="text-muted-foreground mb-4">
-          Let's begin your adventure in Arcadia from the town.
+          Browse local businesses and find the best self-pickup deals in your area.
         </p>
         <Button asChild>
           <Link href="/town">Visit Town</Link>

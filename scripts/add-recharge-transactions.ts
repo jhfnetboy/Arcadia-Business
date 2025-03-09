@@ -24,6 +24,7 @@ async function main() {
       await prisma.transaction.create({
         data: {
           userId: user.id,
+          merchantId: user.id,
           type: "recharge_points",
           amount: user.merchantProfile.pointsBalance,
           status: "completed",
@@ -37,6 +38,7 @@ async function main() {
       await prisma.transaction.create({
         data: {
           userId: user.id,
+          merchantId: user.id,
           type: "recharge_points",
           amount: user.playerProfile.pointsBalance,
           status: "completed",

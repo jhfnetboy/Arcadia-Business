@@ -141,10 +141,12 @@ export default async function CouponDetailPage({ params, searchParams }: CouponD
         prisma.transaction.create({
           data: {
             userId: user.id,
+            merchantId: coupon.merchantId,
             type: "buy_coupon",
             amount: -(coupon.sellPrice ?? 30),
             status: "completed",
             couponId: coupon.id,
+            quantity: 1
           },
         }),
         prisma.couponTemplate.update({

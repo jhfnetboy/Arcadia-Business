@@ -16,7 +16,7 @@ export default async function ProfilePage() {
         <div className="space-y-6">
           <div className="flex flex-col items-center space-y-4">
             <UserAvatar 
-              src={session.user.image} 
+              src={session.user.image || undefined} 
               alt={session.user.name || 'User avatar'}
               size={96}
             />

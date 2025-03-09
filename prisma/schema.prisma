@@ -50,7 +50,6 @@ model User {
   playerProfile   PlayerProfile?
   sessions        Session[]
   transactions    Transaction[]
-  merchantTransactions Transaction[] @relation("MerchantTransactions")
 
   @@map("users")
 }
@@ -131,7 +130,6 @@ model CouponTemplate {
   categoryId        String          @map("category_id")
   name              String
   description       String?
-  image             String?
   discountType      String          @map("discount_type")
   discountValue     Decimal         @map("discount_value")
   totalQuantity     Int             @map("total_quantity")
@@ -144,6 +142,7 @@ model CouponTemplate {
   publishPrice      Int             @map("publish_price")
   sellPrice         Int             @default(30) @map("sell_price")
   promotionType     String          @map("promotion_type")
+  image             String?
   category          CouponCategory  @relation(fields: [categoryId], references: [id])
   merchant          MerchantProfile @relation(fields: [merchantId], references: [id])
   promotion         PromotionType   @relation("PromotionTypeToCouponTemplate", fields: [promotionType], references: [type])
@@ -185,7 +184,6 @@ model RechargeCode {
 model Transaction {
   id         String          @id @default(cuid())
   userId     String          @map("user_id")
-  merchantId String          @map("merchant_id")
   type       String
   amount     Int
   createdAt  DateTime        @default(now()) @map("created_at")
@@ -193,9 +191,9 @@ model Transaction {
   updatedAt  DateTime        @updatedAt @map("updated_at")
   couponId   String?         @map("coupon_id")
   quantity   Int             @default(1)
+  merchantId String          @map("merchant_id")
   coupon     CouponTemplate? @relation(fields: [couponId], references: [id])
   user       User            @relation(fields: [userId], references: [id])
-  merchant   User            @relation("MerchantTransactions", fields: [merchantId], references: [id])
 
   @@map("transactions")
 }

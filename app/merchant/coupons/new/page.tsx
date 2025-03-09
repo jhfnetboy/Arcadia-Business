@@ -227,6 +227,7 @@ export default async function NewCouponPage() {
       prisma.transaction.create({
         data: {
           userId: userWithProfile.id,
+          merchantId: userWithProfile.merchantProfile.id,
           type: "coupon_creation",
           amount: -totalPointsNeeded,
           status: "completed"
