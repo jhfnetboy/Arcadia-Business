@@ -211,12 +211,12 @@ export default async function CouponDetailPage({ params, searchParams }: CouponD
           </div>
 
           <div className="grid gap-2 text-sm">
-            <div>类别：{coupon.category.name}</div>
-            <div>商家：{coupon.merchant.businessName}</div>
-            <div>价格：{coupon.sellPrice ?? 30} PNTs</div>
-            <div>库存：{coupon.remainingQuantity} / {coupon.totalQuantity}</div>
+            <div>Categoary:{coupon.category.name}</div>
+            <div>Merchant:{coupon.merchant.businessName}</div>
+            <div>Price:{coupon.sellPrice ?? 30} PNTs</div>
+            <div>Stock:{coupon.remainingQuantity} / {coupon.totalQuantity}</div>
             <div>
-              有效期：{coupon.startDate.toLocaleDateString()} -{" "}
+              Expired at:{coupon.startDate.toLocaleDateString()} -{" "}
               {coupon.endDate.toLocaleDateString()}
             </div>
           </div>

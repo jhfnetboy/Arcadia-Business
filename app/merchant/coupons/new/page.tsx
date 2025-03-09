@@ -194,7 +194,7 @@ export default async function NewCouponPage() {
       discountType,
       discountValue: new Decimal(discountValue),
       publishPrice: publishCost,
-      sellPrice: Math.round(publishCost * 1.2), // Set sellPrice to 120% of publishCost
+      sellPrice: Number(formData.get("sellPrice")) || Math.round(publishCost/totalQuantity * 1.2), // Use form sellPrice or calculate default
       totalQuantity,
       remainingQuantity: totalQuantity,
       startDate,

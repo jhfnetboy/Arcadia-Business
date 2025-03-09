@@ -48,6 +48,7 @@ export default function NewCouponForm({
   const [selectedType, setSelectedType] = useState<string>('')
   const [quantity, setQuantity] = useState(1)
   const [publishCost, setPublishCost] = useState(0)
+  const [sellPrice, setSellPrice] = useState(0)
   const [image, setImage] = useState<string>('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -56,7 +57,7 @@ export default function NewCouponForm({
     console.log('Promotion Types in component:', promotionTypes)
   }, [promotionTypes])
 
-  // Calculate publish cost when type or quantity changes
+  // Calculate publish cost and sell price when type or quantity changes
   useEffect(() => {
     if (selectedType) {
       const promotionType = promotionTypes.find(pt => pt.type === selectedType)
@@ -70,9 +71,12 @@ export default function NewCouponForm({
           cost 
         })
         setPublishCost(cost)
+        // Set default sell price to 120% of the base points
+        setSellPrice(Math.round(promotionType.basePoints * 1.2))
       }
     } else {
       setPublishCost(0)
+      setSellPrice(0)
     }
   }, [selectedType, quantity, promotionTypes])
 
@@ -93,9 +97,16 @@ export default function NewCouponForm({
     }
   }
 
+  const handleSellPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newPrice = Number.parseInt(e.target.value, 10) || 0
+    setSellPrice(Math.max(0, newPrice)) // Ensure minimum value is 0
+  }
+
   async function handleSubmit(formData: FormData) {
     try {
       setIsSubmitting(true)
+      // Add sell price to form data
+      formData.append("sellPrice", sellPrice.toString())
       // If no image is uploaded, use the default image path
       const imagePath = image || '/logo.png'
       formData.append("image", imagePath)
@@ -215,12 +226,28 @@ export default function NewCouponForm({
               id="publishCost" 
               name="publishCost" 
               type="number" 
-              value={publishCost.toString()} // Convert to string to avoid NaN warning
+              value={publishCost.toString()}
               readOnly
               className="bg-muted"
             />
             <p className="text-sm text-muted-foreground">
               Total points needed: {publishCost} (Your balance: {merchant?.pointsBalance ?? 0} points)
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="sellPrice">Sell Price (Points per Coupon)</Label>
+            <Input 
+              id="sellPrice" 
+              name="sellPrice" 
+              type="number" 
+              min="0"
+              value={sellPrice.toString()}
+              onChange={handleSellPriceChange}
+              required
+            />
+            <p className="text-sm text-muted-foreground">
+              Set the price in points that players will pay for each coupon
             </p>
           </div>
 
