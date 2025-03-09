@@ -115,7 +115,7 @@ export default async function PlayerDashboard() {
                     </div>
                     <div className="text-right">
                       <div className="font-medium">
-                        Cost: {coupon.template.publishPrice} points
+                        Cost: {coupon.template.sellPrice} points
                       </div>
                       <Button asChild className="mt-2" size="sm">
                         <Link href={`/player/coupons/${coupon.id}/show`}>Detail</Link>
@@ -180,7 +180,7 @@ export default async function PlayerDashboard() {
                     </div>
                     <div className="text-right">
                       <div className="font-medium">
-                        Cost: {coupon.template.publishPrice} points
+                        Cost: {coupon.template.sellPrice} points
                       </div>
                       <Button asChild className="mt-2" size="sm">
                         <Link href={`/player/coupons/${coupon.id}/show`}>Detail</Link>
