@@ -1,107 +1,107 @@
-## English Version
+import { PrismaClient } from "@prisma/client"
+import { logDatabaseUrl, maskDatabaseUrl, getErrorDetails } from "./utils"
 
-### 1. Environment Setup
+// Safely log database connection URL
+logDatabaseUrl()
 
-#### 1.1 Local Environment
-1. Ensure Node.js (v20+) is installed
-2. Install pnpm:
-```bash
-npm install -g pnpm
-```
+// Create Prisma client instance with explicit database URL and connection timeout
+const prismaClientSingleton = () => {
+  return new PrismaClient({
+    datasourceUrl: process.env.DATABASE_URL,
+    // Add connection timeout settings
+    // @ts-ignore - These advanced options might not be included in Prisma types
+    log: ['error', 'warn'],
+    __internal: {
+      engine: {
+        connectionTimeout: 10000, // 10 seconds connection timeout
+        queryEngineTimeout: 10000, // 10 seconds query timeout
+      }
+    }
+  })
+}
 
-#### 1.2 Supabase Setup
-1. Create Supabase account and new project
-2. Get from Supabase console:
-   - Database URL
-   - Anon Key
-   - Service Role Key
-3. Run initialization script in SQL editor:
-```sql
--- Enable required extensions
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
-```
+type PrismaClientSingleton = ReturnType<typeof prismaClientSingleton>
 
-#### 1.3 Environment Variables
-1. Copy `.env.example` to `.env`:
-```bash
-cp .env.example .env
-```
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClientSingleton | undefined
+}
 
-2. Fill in required environment variables:
-```
-# Database
-DATABASE_URL="postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres"
+// 安全地记录数据库连接 URL
+logDatabaseUrl(process.env.DATABASE_URL || '')
 
-# Auth
-AUTH_SECRET="generate a random string"
-AUTH_GOOGLE_ID="from Google Cloud Console"
-AUTH_GOOGLE_SECRET="from Google Cloud Console"
-# ... other auth providers config ...
+// 创建 Prisma 客户端实例，显式指定数据库 URL 和连接超时
+export const prisma = globalForPrisma.prisma ?? prismaClientSingleton()
 
-# Storage
-AUTH_KV_REST_API_URL="from Vercel KV"
-AUTH_KV_REST_API_TOKEN="from Vercel KV"
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 
-# Google Maps
-NEXT_PUBLIC_GOOGLE_MAPS_KEY="from Google Cloud Console"
+/**
+ * Test database connection
+ * Attempts to execute a simple query to verify the connection is working
+ */
+export async function testConnection() {
+  // Safely log database URL
+  logDatabaseUrl()
+  
+  try {
+    const result = await prisma.$queryRaw`SELECT 1`
+    console.log('Database connection test successful:', result)
+    return true
+  } catch (error) {
+    console.error('Database connection test failed:', error)
+    return false
+  }
+}
 
-# Other
-NEXT_PUBLIC_APP_URL="your app domain"
-AUTH_DEBUG="1"  # Set to 1 for development, remove for production
-```
-
-### 2. Database Migration
-
-1. Generate Prisma client:
-```bash
-pnpm prisma generate
-```
-
-2. Push database schema:
-```bash
-pnpm prisma db push
-```
-
-3. Create migration files if needed:
-```bash
-pnpm prisma migrate dev --name init
-```
-
-### 3. Testing
-
-1. Run tests:
-```bash
-pnpm test
-```
-
-2. Check test coverage:
-```bash
-pnpm test:coverage
-```
-
-### 4. Vercel Deployment
-
-1. Install Vercel CLI:
-```bash
-pnpm install -g vercel
-```
-
-2. Login to Vercel:
-```bash
-vercel login
-```
-
-3. Link project:
-```bash
-vercel link
-```
-
-4. Configure Vercel environment variables:
-```bash
-vercel env pull .env.production
-```
-
+/**
+ * 创建一个新的 Prisma 客户端实例，使用不同的连接选项
+ * 这对于测试不同的连接参数很有用
+ */
+export function createPrismaClient(options: {
+  url?: string;
+  ssl?: boolean | { rejectUnauthorized: boolean };
+  connectionTimeout?: number;
+}) {
+  const { url, ssl = true, connectionTimeout = 10000 } = options
+  
+  // 构建数据库 URL
+  let dbUrl = url || process.env.DATABASE_URL || ''
+  
+  // 如果需要，添加或修改 SSL 参数
+  if (typeof ssl === 'boolean') {
+    if (dbUrl && !dbUrl.includes('sslmode=') && ssl) {
+      dbUrl = `${dbUrl}${dbUrl.includes('?') ? '&' : '?'}sslmode=require`
+    } else if (dbUrl && dbUrl.includes('sslmode=') && !ssl) {
+      dbUrl = dbUrl.replace(/sslmode=require/g, 'sslmode=prefer')
+    }
+  } else if (ssl && !ssl.rejectUnauthorized) {
+    // 禁用 SSL 证书验证
+    if (dbUrl.includes('sslmode=require')) {
+      dbUrl = dbUrl.replace(/sslmode=require/g, 'sslmode=prefer')
+    }
+    if (!dbUrl.includes('sslmode=')) {
+      dbUrl = `${dbUrl}${dbUrl.includes('?') ? '&' : '?'}sslmode=prefer`
+    }
+  }
+  
+  // 安全地记录数据库 URL
+  logDatabaseUrl(dbUrl, '创建新的 Prisma 客户端，URL');
+  
+  return new PrismaClient({
+    datasources: {
+      db: {
+        url: dbUrl,
+      },
+    },
+    log: ['error', 'warn'],
+    // @ts-ignore
+    __internal: {
+      engine: {
+        connectionTimeout,
+        queryEngineTimeout: connectionTimeout,
+      },
+    },
+  })
+} 
 5. Deploy project:
 ```bash
 vercel --prod
@@ -464,8 +464,12 @@ Transaction 表中存在 merchantId，String          @map("merchant_id") 和 me
 3. 在核销页面，需要新增 type 为 write_off 的记录，并关联到对应的 CouponTemplate 和 IssuedCoupon
 
 
+----
 
+1. 首页的 Explore Town 区域，请使用 public/background.png 作为背景图，另外每次加载这个背景图的随机区域，不要缩放，而是随机显示区域能显示的大小
+2.请扫描所有 page 页面代码的提示，请改为英文，每个在 app 下的页面
+3. http://localhost:3000/merchant页面，Verify Coupon 区域，点击 verify，请查询 IssuedCoupon，显示 status（是否已经使用），是否在有效期，显示发行的 merchant 和有效期倒计时计算
+4. 显示每个 write_off 且 merchantId 是登录帐号 merchanId 的记录，显示是 +30，是 merchant 的收入
+5. @page.tsx 请修改 sellPrice 为 publishCost 的 1.2 倍，而不是默认的 30
 
-
-
-
+首页整体上移一点，缩小点title和top的边距；town area缩小高度为原来的80%，visit town button 设置为灰蓝色，否则字体看不到

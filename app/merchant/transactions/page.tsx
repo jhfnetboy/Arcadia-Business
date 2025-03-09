@@ -4,35 +4,26 @@ import { prisma } from "@/lib/prisma"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 
-export default async function MerchantTransactionsPage() {
+// Helper function to format date
+function formatDate(date: Date): string {
+  return date.toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+export default async function TransactionsPage() {
   const session = await auth()
   if (!session?.user?.email) {
-    redirect("/auth/signin")
+    redirect("/auth/signin?callbackUrl=/merchant/transactions")
   }
 
   const user = await prisma.user.findUnique({
     where: { email: session.user.email },
-    include: {
-      merchantProfile: true,
-      transactions: {
-        where: {
-          OR: [
-            { type: "coupon_creation" },    // 发布优惠券
-            { type: "recharge_points" }     // 充值积分
-          ]
-        },
-        include: {
-          coupon: {
-            include: {
-              merchant: true
-            }
-          }
-        },
-        orderBy: {
-          createdAt: 'desc'
-        }
-      }
-    }
+    include: { merchantProfile: true }
   })
 
   if (!user?.merchantProfile) {
@@ -41,13 +32,16 @@ export default async function MerchantTransactionsPage() {
 
   const transactions = await prisma.transaction.findMany({
     where: {
-      userId: user.id,
+      merchantId: user.merchantProfile.id,
       OR: [
-        { type: "coupon_creation" },    // 发布优惠券
-        { type: "recharge_points" }     // 充值积分
-      ]
+        { type: "write_off" },
+        { type: "recharge_points" },
+        { type: "buy_coupon" }
+      ],
+      status: "completed"
     },
     include: {
+      user: true,
       coupon: true
     },
     orderBy: {
@@ -56,50 +50,54 @@ export default async function MerchantTransactionsPage() {
   })
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-6">
+    <div className="container py-8">
+      <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold">Transaction History</h1>
-          <p className="text-muted-foreground">
-            Current Balance: {user.merchantProfile.pointsBalance} points
-          </p>
+          <h1 className="text-3xl font-bold">Transaction History</h1>
+          <p className="text-muted-foreground">View your transaction history</p>
         </div>
         <Button asChild variant="outline">
           <Link href="/merchant">Back to Dashboard</Link>
         </Button>
       </div>
 
-      <div className="space-y-4">
-        {transactions.map((transaction) => (
-          <div key={transaction.id} className="flex items-center justify-between p-4 border rounded-lg">
-            <div>
-              <div className="font-medium">
-                {transaction.type === "coupon_creation" ? (
-                  <>
-                    Created Coupon (ID: {transaction.couponId || "N/A"})
+      <div className="rounded-lg border">
+        <div className="p-4 border-b">
+          <h2 className="text-lg font-semibold">All Transactions</h2>
+        </div>
+        <div className="divide-y">
+          {transactions.length === 0 ? (
+            <div className="p-4 text-center text-muted-foreground">
+              No transactions found
+            </div>
+          ) : (
+            transactions.map((tx) => (
+              <div key={tx.id} className="p-4 flex items-center justify-between hover:bg-muted/50">
+                <div>
+                  <div className={`font-medium ${tx.type === 'write_off' || tx.type === 'recharge_points' ? 'text-green-600' : 'text-red-600'}`}>
+                    {tx.type === 'write_off' ? '+30' : tx.type === 'recharge_points' ? `+${tx.amount}` : tx.amount} points
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {tx.type === 'write_off' ? 'From' : tx.type === 'recharge_points' ? 'Recharge' : 'Purchase'}: {tx.user.name || tx.user.email}
+                  </div>
+                  {tx.coupon && (
                     <div className="text-sm text-muted-foreground">
-                      Quantity: {transaction.quantity}
+                      Coupon: {tx.coupon.name}
                     </div>
-                  </>
-                ) : (
-                  "Points Recharge"
-                )}
+                  )}
+                </div>
+                <div className="text-right">
+                  <div className="text-sm text-muted-foreground">
+                    {formatDate(tx.createdAt)}
+                  </div>
+                  <div className="text-sm font-medium text-green-600">
+                    Completed
+                  </div>
+                </div>
               </div>
-              <div className="text-sm text-muted-foreground">
-                {new Date(transaction.createdAt).toLocaleString()}
-              </div>
-            </div>
-            <div className={transaction.amount > 0 ? "text-green-600" : "text-red-600"}>
-              {transaction.amount > 0 ? "+" : ""}{transaction.amount} points
-            </div>
-          </div>
-        ))}
-
-        {transactions.length === 0 && (
-          <div className="text-center p-8 border border-dashed rounded-lg text-muted-foreground">
-            No transactions yet
-          </div>
-        )}
+            ))
+          )}
+        </div>
       </div>
     </div>
   )

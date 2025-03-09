@@ -1,6 +1,5 @@
-export function captureError(error: Error) {
-  // 添加错误监控逻辑
+// Add error monitoring logic
+export function logError(error: Error) {
   console.error(error)
-  
-  // 可以集成 Sentry 等服务
+  // Can integrate services like Sentry here
 } 

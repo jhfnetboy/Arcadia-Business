@@ -7,6 +7,13 @@ import type { Prisma } from "@prisma/client"
 import { Button } from "@/components/ui/button"
 import { getUserStats } from "@/lib/queries/user-stats"
 
+function getRandomPosition() {
+  // Generate random position between 0-70% to ensure some content is always visible
+  const x = Math.floor(Math.random() * 70)
+  const y = Math.floor(Math.random() * 70)
+  return `${x}% ${y}%`
+}
+
 export default async function HomePage() {
   const session = await auth()
   const { user, userStats } = await getUserStats(session?.user?.email)
@@ -62,11 +69,11 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="flex flex-col gap-8 container py-8">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-4xl font-bold">Welcome back, {session.user.name}!</h1>
-        <p className="text-xl text-muted-foreground">
-          Your one-stop platform for digital coupons and rewards.
+    <div className="flex flex-col gap-6 container py-4">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-3xl font-bold">Welcome back, {session.user.name}!</h1>
+        <p className="text-lg text-muted-foreground">
+          Arcadia: Begin Your Web3 Journey!
         </p>
       </div>
 
@@ -112,9 +119,6 @@ export default async function HomePage() {
                 <span className="text-muted-foreground">Used Coupons:</span>
                 <span className="font-medium">{userStats.player.usedCoupons}</span>
               </div>
-              <div className="mt-2 text-sm text-muted-foreground">
-                <p>* Total Purchases includes all coupons, equipment, skills, and NFTs</p>
-              </div>
             </div>
             <div className="mt-4">
               <Button asChild variant="outline">
@@ -142,15 +146,25 @@ export default async function HomePage() {
         )}
       </div>
 
-      <div className="rounded-lg border p-6">
-        <h2 className="text-2xl font-semibold mb-4">Explore Town</h2>
-        <p className="text-muted-foreground mb-4">
-          Browse local businesses and find the best self-pickup deals in your area.
-        </p>
-        <Button asChild>
-          <Link href="/town">Visit Town</Link>
-        </Button>
-      </div>
+      <section 
+        className="relative h-[240px] overflow-hidden rounded-lg border"
+        style={{
+          backgroundImage: 'url(/background.png)',
+          backgroundPosition: getRandomPosition(),
+          backgroundRepeat: 'no-repeat',
+          backgroundSize: 'cover'
+        }}
+      >
+        <div className="absolute inset-0 bg-black/50">
+          <div className="container mx-auto px-4 py-12">
+            <h2 className="text-3xl font-bold text-white mb-3">Explore Town</h2>
+            <p className="text-lg text-white/90 mb-4">Discover amazing world in Arcadia</p>
+            <Button asChild variant="secondary" className="hover:bg-white/90">
+              <Link href="/town">Visit Town</Link>
+            </Button>
+          </div>
+        </div>
+      </section>
     </div>
   )
 }

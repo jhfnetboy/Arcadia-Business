@@ -121,7 +121,7 @@ export default async function CouponDetailPage({ params, searchParams }: CouponD
       }
 
       if (coupon.remainingQuantity <= 0) {
-        throw new Error("此优惠券已售罄");
+        throw new Error("Sold out");
       }
 
       // 3. 生成兑换码和二维码
@@ -197,9 +197,9 @@ export default async function CouponDetailPage({ params, searchParams }: CouponD
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">优惠券详情</h1>
+        <h1 className="text-3xl font-bold">Coupon Information</h1>
         <Button asChild variant="outline">
-          <Link href="/player/browse">返回浏览</Link>
+          <Link href="/player/browse">Back</Link>
         </Button>
       </div>
 
@@ -213,7 +213,7 @@ export default async function CouponDetailPage({ params, searchParams }: CouponD
           <div className="grid gap-2 text-sm">
             <div>类别：{coupon.category.name}</div>
             <div>商家：{coupon.merchant.businessName}</div>
-            <div>价格：{coupon.sellPrice ?? 30} 积分</div>
+            <div>价格：{coupon.sellPrice ?? 30} PNTs</div>
             <div>库存：{coupon.remainingQuantity} / {coupon.totalQuantity}</div>
             <div>
               有效期：{coupon.startDate.toLocaleDateString()} -{" "}
@@ -223,23 +223,23 @@ export default async function CouponDetailPage({ params, searchParams }: CouponD
 
           <div className="mt-2">
             <div className="text-sm font-medium">
-              你的余额：{user.playerProfile.pointsBalance} 积分
+              Your Balance:{user.playerProfile.pointsBalance} PNTs
             </div>
             {user.playerProfile.pointsBalance < (coupon.sellPrice ?? 30) && (
-              <p className="text-sm text-destructive">积分不足，无法兑换此优惠券</p>
+              <p className="text-sm text-destructive">PNTs not enough, can't buy it.</p>
             )}
             {isNotStarted && (
               <p className="text-sm text-yellow-600">
-                注意：此优惠券从 {coupon.startDate.toLocaleString()} 开始有效
+                Caution: Coupon be valid from {coupon.startDate.toLocaleString()}.
               </p>
             )}
             {isExpired && (
               <p className="text-sm text-destructive">
-                此优惠券已于 {coupon.endDate.toLocaleString()} 过期
+                Coupon be expired at {coupon.endDate.toLocaleString()}
               </p>
             )}
             {isOutOfStock && (
-              <p className="text-sm text-destructive">此优惠券已售罄</p>
+              <p className="text-sm text-destructive">Coupon sold out</p>
             )}
             {error && (
               <p className="text-sm text-destructive mt-2">{decodeURIComponent(error)}</p>
@@ -257,12 +257,12 @@ export default async function CouponDetailPage({ params, searchParams }: CouponD
               }
             >
               {user.playerProfile.pointsBalance < (coupon.sellPrice ?? 30)
-                ? `积分不足（需要 ${coupon.sellPrice ?? 30} 积分）`
+                ? `PNTs not enough（need ${coupon.sellPrice ?? 30} PNTs）`
                 : isExpired
-                ? "优惠券已过期"
+                ? "Expired"
                 : isOutOfStock
-                ? "已售罄"
-                : `用 ${coupon.sellPrice ?? 30} 积分兑换`}
+                ? "Sold out"
+                : `Use ${coupon.sellPrice ?? 30} PNTs redeem`}
             </Button>
           </form>
         </div>

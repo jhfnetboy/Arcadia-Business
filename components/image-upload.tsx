@@ -26,12 +26,7 @@ type BucketStatus = {
   isChecking: boolean;
 }
 
-// 检查存储桶是否存在并验证权限
-const checkBucketAndPermissions = async () => {
-  // Skip bucket check and assume everything is fine
-  setBucketReady(true)
-  return true
-}
+
 
 // 生成唯一的文件名
 function generateUniqueFileName(originalName: string): string {
@@ -205,7 +200,6 @@ export function MultipleImageUpload({
         }
       }
 
-      await checkBucketAndPermissions()
 
       const urls: string[] = []
 
