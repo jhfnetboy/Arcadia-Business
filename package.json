@@ -15,7 +15,8 @@
     "test:coverage": "jest --coverage",
     "test:debug": "jest --debug",
     "recharge:merchants": "tsx data/recharge-merchants.ts",
-    "recharge:players": "tsx data/recharge-players.ts"
+    "recharge:players": "tsx data/recharge-players.ts",
+    "recharge": "ts-node scripts/recharge-all.ts"
   },
   "jest": {
     "testEnvironment": "jsdom"
