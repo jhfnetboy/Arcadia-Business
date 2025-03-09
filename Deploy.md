@@ -476,3 +476,7 @@ Transaction 表中存在 merchantId，String          @map("merchant_id") 和 me
 
 2.商家页面的verify功能请添加，现在点击没反应：输入优惠券验证码，点击verify，查询显示优惠券的状态、有效期、发行商家和倒计时信息
 3. http://localhost:3000/merchant,Redeemed Coupons 区域和其他的三个区域水平位置不太一致，请检查css
+
+1.首页的Explore Town区域，当mouse on的时候，请提升背景图的亮度，离开了又变回原来的比较黑的亮度
+2.当未注册merchan profile的时候访问报错：http://localhost:3000/merchant，页面显示loading，应该是提示未发现merchant注册信息，请点击Become merchant button,引导到http://localhost:3000/merchant/new页面
+3.首页如果没有merchant信息，也要显示merchant区域，引导button注册merchant，而不是不显示任何入口

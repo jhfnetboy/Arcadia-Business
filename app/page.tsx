@@ -78,76 +78,81 @@ export default async function HomePage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        {user?.merchantProfile && (
-          <div className="rounded-lg border p-6">
-            <h2 className="text-2xl font-semibold mb-4">Merchant Dashboard</h2>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Points Balance:</span>
-                <span className="font-medium">{userStats.merchant.pointsBalance} PNTs</span>
+        <div className="rounded-lg border p-6">
+          <h2 className="text-2xl font-semibold mb-4">Merchant Dashboard</h2>
+          {user?.merchantProfile ? (
+            <>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Points Balance:</span>
+                  <span className="font-medium">{userStats.merchant.pointsBalance} PNTs</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Total Issued Coupons:</span>
+                  <span className="font-medium">{userStats.merchant.totalCoupons}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Used Coupons:</span>
+                  <span className="font-medium">{userStats.merchant.usedCoupons}</span>
+                </div>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Total Issued Coupons:</span>
-                <span className="font-medium">{userStats.merchant.totalCoupons}</span>
+              <div className="mt-4">
+                <Button asChild variant="outline">
+                  <Link href="/merchant">Go to Merchant Dashboard</Link>
+                </Button>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Used Coupons:</span>
-                <span className="font-medium">{userStats.merchant.usedCoupons}</span>
-              </div>
-            </div>
-            <div className="mt-4">
-              <Button asChild variant="outline">
-                <Link href="/merchant">Go to Merchant Dashboard</Link>
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {user?.playerProfile && (
-          <div className="rounded-lg border p-6">
-            <h2 className="text-2xl font-semibold mb-4">Player Dashboard</h2>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Points Balance:</span>
-                <span className="font-medium">{userStats.player.pointsBalance} PNTs</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Total Purchases:</span>
-                <span className="font-medium">{userStats.player.totalPurchases}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Used Coupons:</span>
-                <span className="font-medium">{userStats.player.usedCoupons}</span>
-              </div>
-            </div>
-            <div className="mt-4">
-              <Button asChild variant="outline">
-                <Link href="/player">Go to Player Dashboard</Link>
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {!user?.merchantProfile && !user?.playerProfile && (
-          <div className="rounded-lg border p-6 col-span-2">
-            <h2 className="text-2xl font-semibold mb-4">Get Started</h2>
-            <p className="text-muted-foreground mb-4">
-              Choose your role to start exploring Arcadia:
-            </p>
-            <div className="flex gap-4">
+            </>
+          ) : (
+            <>
+              <p className="text-muted-foreground mb-4">
+                Register as a merchant to start creating and managing digital coupons for your business.
+              </p>
               <Button asChild>
-                <Link href="/merchant/new">Become a Merchant</Link>
+                <Link href="/merchant/new">Register as Merchant</Link>
               </Button>
+            </>
+          )}
+        </div>
+
+        <div className="rounded-lg border p-6">
+          <h2 className="text-2xl font-semibold mb-4">Player Dashboard</h2>
+          {user?.playerProfile ? (
+            <>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Points Balance:</span>
+                  <span className="font-medium">{userStats.player.pointsBalance} PNTs</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Total Purchases:</span>
+                  <span className="font-medium">{userStats.player.totalPurchases}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Used Coupons:</span>
+                  <span className="font-medium">{userStats.player.usedCoupons}</span>
+                </div>
+              </div>
+              <div className="mt-4">
+                <Button asChild variant="outline">
+                  <Link href="/player">Go to Player Dashboard</Link>
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-muted-foreground mb-4">
+                Join as a player to discover exclusive deals and earn rewards at your favorite stores.
+              </p>
               <Button asChild>
-                <Link href="/player/new">Join as Player</Link>
+                <Link href="/player/new">Register as Player</Link>
               </Button>
-            </div>
-          </div>
-        )}
+            </>
+          )}
+        </div>
       </div>
 
       <section 
-        className="relative h-[240px] overflow-hidden rounded-lg border"
+        className="relative h-[240px] overflow-hidden rounded-lg border group"
         style={{
           backgroundImage: 'url(/background.png)',
           backgroundPosition: getRandomPosition(),
@@ -155,7 +160,7 @@ export default async function HomePage() {
           backgroundSize: 'cover'
         }}
       >
-        <div className="absolute inset-0 bg-black/50">
+        <div className="absolute inset-0 bg-black/50 transition-opacity duration-300 group-hover:bg-black/30">
           <div className="container mx-auto px-4 py-12">
             <h2 className="text-3xl font-bold text-white mb-3">Explore Town</h2>
             <p className="text-lg text-white/90 mb-4">Discover amazing world in Arcadia</p>

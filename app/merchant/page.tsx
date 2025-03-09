@@ -68,6 +68,7 @@ export default function MerchantDashboard() {
   const [error, setError] = useState('')
   const [data, setData] = useState<MerchantData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [noProfile, setNoProfile] = useState(false)
 
   useEffect(() => {
     const loadData = async () => {
@@ -78,6 +79,11 @@ export default function MerchantDashboard() {
         if (!response.ok) {
           if (response.status === 401) {
             router.push("/auth/signin?callbackUrl=/merchant")
+            return
+          }
+          if (response.status === 404 && result.error === "Merchant profile not found") {
+            setNoProfile(true)
+            setLoading(false)
             return
           }
           throw new Error(result.error || "Failed to load merchant profile")
@@ -161,8 +167,34 @@ export default function MerchantDashboard() {
     }
   }
 
-  if (loading || !data) {
-    return <div>Loading...</div>
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-[400px]">
+      <div className="text-center">
+        <div className="text-lg font-medium mb-2">Loading...</div>
+        <div className="text-sm text-muted-foreground">Please wait while we load your merchant profile</div>
+      </div>
+    </div>
+  }
+
+  if (noProfile) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-2">Welcome to Merchant Dashboard</h1>
+          <p className="text-muted-foreground mb-4">
+            It looks like you haven't set up your merchant profile yet.
+            Create one now to start managing your coupons and transactions.
+          </p>
+        </div>
+        <Button asChild size="lg">
+          <Link href="/merchant/new">Become a Merchant</Link>
+        </Button>
+      </div>
+    )
+  }
+
+  if (!data) {
+    return <div className="text-center text-red-600">Failed to load merchant profile</div>
   }
 
   const { user, stats } = data
