@@ -473,3 +473,6 @@ Transaction 表中存在 merchantId，String          @map("merchant_id") 和 me
 5. @page.tsx 请修改 sellPrice 为 publishCost 的 1.2 倍，而不是默认的 30
 
 首页整体上移一点，缩小点title和top的边距；town area缩小高度为原来的80%，visit town button 设置为灰蓝色，否则字体看不到
+
+2.商家页面的verify功能请添加，现在点击没反应：输入优惠券验证码，点击verify，查询显示优惠券的状态、有效期、发行商家和倒计时信息
+3. http://localhost:3000/merchant,Redeemed Coupons 区域和其他的三个区域水平位置不太一致，请检查css
