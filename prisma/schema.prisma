@@ -50,6 +50,7 @@ model User {
   playerProfile   PlayerProfile?
   sessions        Session[]
   transactions    Transaction[]
+  merchantTransactions Transaction[] @relation("MerchantTransactions")
 
   @@map("users")
 }
@@ -182,17 +183,19 @@ model RechargeCode {
 }
 
 model Transaction {
-  id        String          @id @default(cuid())
-  userId    String          @map("user_id")
-  type      String
-  amount    Int
-  createdAt DateTime        @default(now()) @map("created_at")
-  status    String
-  updatedAt DateTime        @updatedAt @map("updated_at")
-  couponId  String?         @map("coupon_id")
-  quantity  Int             @default(1)
-  coupon    CouponTemplate? @relation(fields: [couponId], references: [id])
-  user      User            @relation(fields: [userId], references: [id])
+  id         String          @id @default(cuid())
+  userId     String          @map("user_id")
+  merchantId String          @map("merchant_id")
+  type       String
+  amount     Int
+  createdAt  DateTime        @default(now()) @map("created_at")
+  status     String
+  updatedAt  DateTime        @updatedAt @map("updated_at")
+  couponId   String?         @map("coupon_id")
+  quantity   Int             @default(1)
+  coupon     CouponTemplate? @relation(fields: [couponId], references: [id])
+  user       User            @relation(fields: [userId], references: [id])
+  merchant   User            @relation("MerchantTransactions", fields: [merchantId], references: [id])
 
   @@map("transactions")
 }

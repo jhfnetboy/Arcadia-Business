@@ -237,7 +237,7 @@ export default async function NewCouponPage() {
     redirect("/merchant/coupons")
   }
 
-  console.log('正在查询优惠券分类...')
+  // console.log('正在查询优惠券分类...')
   try {
     const categories = await prisma.couponCategory.findMany()
     console.log(`成功获取 ${categories.length} 个优惠券分类:`, categories.map(c => c.name))

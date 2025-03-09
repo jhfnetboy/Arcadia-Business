@@ -24,7 +24,7 @@ async function main() {
       prisma.transaction.create({
         data: {
           userId: player.user.id,
-          type: "points_recharge",
+          type: "recharge_points",
           amount: 1000,
           status: "completed"
         }

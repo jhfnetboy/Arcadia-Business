@@ -359,3 +359,68 @@ npx tsx data/recharge-players.ts
 npx prisma migrate dev --name add_image_to_coupon_temp
 
 ```
+
+## happy flow 流程描述
+
+1. player 通过 Email（google account）登录进入 town 页面，显示用户 Email，头像 :green_heart:
+2. 目前先让 player 注册钱包地址（一个），后端在数据库中记录
+3. 未来自动查询用户 Email 在后端数据库绑定的钱包地址，可以绑定多个（多链有多个）
+4. 查询 player 钱包地址是否拥有指定 NFT 合约的 NFT
+5. 没有则需要购买 NFT，进入页面购买
+6. 如果拥有，则可以创建 hero，否则不能创建
+7. 创建 hero 后，hero 会出现在 town 页面，并且可以进行管理
+8. 下次登录，自动 loadHero
+9. 至此 town 页面的初始化完成了
+10. 点击进入 Game 冒险页面，开始冒险，携带基础信息
+11. 冒险过程中，需要消耗能量，能量不足则不能进行冒险
+12. 冒险中获得奖励，根据难度不同，奖励不同
+13. 可以保存游戏，在 Game 内出发，修改 name，记录获得的积分，获得的装备，获得的 NFT coupon 等
+14. Town 页面还可以使用积分，进行 skill 升级，装备（NFT）购买
+
+
+### Transaction type
+
+```javascript
+  prisma.transaction.create({
+        data: {
+          userId: userWithProfile.id,
+          type: "coupon_creation",
+          amount: -totalPointsNeeded,
+          status: "completed"
+        }
+  })
+```
+
+1. recharge_points: 充值 (从链上到节点)
+2. coupon_creation: 创建优惠券
+3. buy_coupon: 购买优惠券
+4. write_off: 核销优惠券
+5. buy_equipment: 购买装备
+6. buy_skill: 购买技能
+7. buy_nft: 购买 NFT
+
+商家最关注的三个问题：
+
+1. 积分余额：我有多少钱（余额）
+   1.  MerchantProfile.pointsBalance, @default(0) @map("points_balance")
+2. 积分明细：我花了多少（明细）
+   1. coupon_creation：统计所有当前 merchantId 在 CouponTemplate 表 的 totalQuantity 乘以 publishPrice 的汇总
+   2. 未来会有其他表的积分消耗，例如游戏内活动，游戏内抽奖，物理地址寻宝，游戏内持续任务等
+3. 积分兑换：花钱效果如何（兑换）
+   1. 统计所有当前 merchantId 在 Transaction 的 type 为 write_off 的，表示真正购买到的客户（优惠券被使用）
+   2. 更多的其他表的消耗统计（TODO)
+
+用户最关注的三个问题：
+1. 积分余额：我有多少钱（余额）
+   1. PlayerProfile.pointsBalance, @default(0) @map("points_balance")
+2. 积分兑换：我花了多少钱（兑换）
+   1. 统计所有当前 userId 在 Transaction 表的 type 为 buy_coupon 的记录 buyPrice 汇总
+3. 兑换结果：我买到了多少（数量）
+   1. 统计所有当前 userId 在 Transaction 表的 type 为 buy_coupon，buy_equipment，buy_skill，buy_nft 的记录汇总
+
+
+
+
+
+
+

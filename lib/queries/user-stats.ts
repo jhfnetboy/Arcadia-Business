@@ -19,15 +19,7 @@ export async function getUserStats(email: string) {
     const user = await prisma.user.findUnique({
       where: { email },
       include: {
-        merchantProfile: {
-          include: {
-            coupons: {
-              include: {
-                issuedCoupons: true
-              }
-            }
-          }
-        },
+        merchantProfile: true,
         playerProfile: true
       }
     })
@@ -35,36 +27,26 @@ export async function getUserStats(email: string) {
     if (!user) return { user: null, userStats }
 
     if (user.merchantProfile) {
-      // 获取商家发行的优惠券数量
-      const issuedCount = await prisma.issuedCoupon.count({
+      // 获取商家创建的优惠券模板的总发行量
+      const totalQuantityResult = await prisma.couponTemplate.aggregate({
         where: {
-          templateId: {
-            in: user.merchantProfile.coupons.map(c => c.id)
-          }
+          merchantId: user.merchantProfile.id
+        },
+        _sum: {
+          totalQuantity: true
         }
       })
 
-      // 获取已使用的优惠券数量（通过 Transaction 表）
+      // 获取商家的已使用优惠券数量
       const usedCount = await prisma.transaction.count({
         where: {
-          couponId: {
-            in: await prisma.issuedCoupon.findMany({
-              where: {
-                templateId: {
-                  in: user.merchantProfile.coupons.map(c => c.id)
-                }
-              },
-              select: {
-                id: true
-              }
-            }).then(coupons => coupons.map(c => c.id))
-          }
+          merchantId: user.merchantProfile.id
         }
       })
 
       userStats.merchant = {
         pointsBalance: user.merchantProfile.pointsBalance,
-        totalCoupons: issuedCount,
+        totalCoupons: totalQuantityResult._sum.totalQuantity || 0,
         usedCoupons: usedCount
       }
     }
@@ -80,16 +62,7 @@ export async function getUserStats(email: string) {
       // 获取玩家已使用的优惠券数量
       const usedCoupons = await prisma.transaction.count({
         where: {
-          couponId: {
-            in: await prisma.issuedCoupon.findMany({
-              where: {
-                userId: user.playerProfile.id
-              },
-              select: {
-                id: true
-              }
-            }).then(coupons => coupons.map(c => c.id))
-          }
+          userId: user.playerProfile.id
         }
       })
 
