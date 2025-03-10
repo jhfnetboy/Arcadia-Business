@@ -480,3 +480,5 @@ Transaction 表中存在 merchantId，String          @map("merchant_id") 和 me
 1.首页的Explore Town区域，当mouse on的时候，请提升背景图的亮度，离开了又变回原来的比较黑的亮度
 2.当未注册merchan profile的时候访问报错：http://localhost:3000/merchant，页面显示loading，应该是提示未发现merchant注册信息，请点击Become merchant button,引导到http://localhost:3000/merchant/new页面
 3.首页如果没有merchant信息，也要显示merchant区域，引导button注册merchant，而不是不显示任何入口
+
+
