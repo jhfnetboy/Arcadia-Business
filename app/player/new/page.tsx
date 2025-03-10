@@ -2,6 +2,7 @@ import { auth } from "auth"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import NewPlayerForm from "@/components/new-player-form"
+import { NextResponse } from "next/server"
 
 export default async function NewPlayerPage() {
   const session = await auth()
@@ -48,7 +49,7 @@ export default async function NewPlayerPage() {
     const walletAddress = formData.get("walletAddress") as string
 
     if (!walletAddress) {
-      return { error: "Please provide a wallet address" }
+      throw new Error("Please provide a wallet address")
     }
 
     // Check if wallet address is already in use
@@ -57,15 +58,20 @@ export default async function NewPlayerPage() {
     })
 
     if (existingProfile) {
-      return { error: "This wallet address is already registered" }
+      throw new Error("This wallet address is already registered")
     }
 
-    await prisma.playerProfile.create({
-      data: {
-        userId: user.id,
-        walletAddress
-      }
-    })
+    try {
+      await prisma.playerProfile.create({
+        data: {
+          userId: user.id,
+          walletAddress
+        }
+      })
+    } catch (error) {
+      console.error("Failed to create player profile:", error)
+      throw new Error("Failed to create player profile")
+    }
 
     redirect("/player")
   }
