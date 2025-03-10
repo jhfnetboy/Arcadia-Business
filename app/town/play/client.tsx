@@ -152,21 +152,8 @@ export default function PlayGameClient({ user }: PlayGameClientProps) {
     }
   }
 
-  // 返回 Town 页面
-  const goBackToTown = () => {
-    router.push('/town')
-  }
-
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-6">Arcadia Game Center</h1>
-      
-      <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-        <p className="text-sm">
-          Logged in as: <strong>{user.name || user.email}</strong>
-        </p>
-      </div>
-      
+    <>
       {!hero ? (
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <h2 className="text-xl font-semibold mb-4">Create Your Hero</h2>
@@ -197,9 +184,6 @@ export default function PlayGameClient({ user }: PlayGameClientProps) {
               <strong>Blockchain TX:</strong> {txHash.substring(0, 10)}...
             </p>
           )}
-          <Button onClick={goBackToTown} variant="outline" className="mr-2">
-            Back to Town
-          </Button>
         </div>
       )}
       
@@ -242,6 +226,6 @@ export default function PlayGameClient({ user }: PlayGameClientProps) {
           </div>
         </div>
       )}
-    </div>
+    </>
   )
 } 
