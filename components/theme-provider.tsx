@@ -29,16 +29,21 @@ export default function ThemeProvider({
   children,
   defaultTheme = "light",
 }: ThemeProviderProps) {
+  const [mounted, setMounted] = useState(false)
   const [theme, setTheme] = useState<Theme>(defaultTheme)
 
+  // 只在客户端渲染后执行
   useEffect(() => {
+    setMounted(true)
+    
     // 移除可能存在的 chakra-ui 类
     document.body.classList.remove("chakra-ui-light", "chakra-ui-dark")
     
     // 设置当前主题
     const root = window.document.documentElement
-    root.setAttribute("data-theme", theme)
-  }, [theme])
+    root.removeAttribute("data-theme")
+    root.removeAttribute("style")
+  }, [])
 
   const value = {
     theme,
@@ -47,6 +52,7 @@ export default function ThemeProvider({
     },
   }
 
+  // 在服务器端渲染和客户端首次渲染时返回相同的内容
   return (
     <ThemeProviderContext.Provider value={value}>
       {children}

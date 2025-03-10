@@ -4,6 +4,7 @@ import { Inter } from "next/font/google"
 import Footer from "@/components/footer"
 import Header from "@/components/header"
 import ThemeProvider from "@/components/theme-provider"
+import ChakraCleanup from "@/components/chakra-cleanup"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -16,7 +17,8 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: React.PropsWithChildren) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={inter.className} suppressHydrationWarning>
+        <ChakraCleanup />
         <ThemeProvider>
           <div className="flex h-full min-h-screen w-full flex-col justify-between">
             <Header />
