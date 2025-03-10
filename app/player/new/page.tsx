@@ -2,7 +2,14 @@ import { auth } from "auth"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import NewPlayerForm from "@/components/new-player-form"
-import { NextResponse } from "next/server"
+
+// 创建一个自定义错误类来处理用户友好的错误
+class UserError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'UserError'
+  }
+}
 
 export default async function NewPlayerPage() {
   const session = await auth()
@@ -21,7 +28,7 @@ export default async function NewPlayerPage() {
 
   // If no user found, redirect to homepage
   if (!user) {
-    throw new Error("User not found")
+    throw new UserError("User not found")
   }
 
   // If player profile exists, redirect to player dashboard
@@ -34,7 +41,7 @@ export default async function NewPlayerPage() {
 
     const session = await auth()
     if (!session?.user?.email) {
-      throw new Error("You must be logged in to create a player profile")
+      throw new UserError("You must be logged in to create a player profile")
     }
 
     // 重新获取用户信息
@@ -43,13 +50,13 @@ export default async function NewPlayerPage() {
     })
 
     if (!user) {
-      throw new Error("User not found")
+      throw new UserError("User not found")
     }
 
     const walletAddress = formData.get("walletAddress") as string
 
     if (!walletAddress) {
-      throw new Error("Please provide a wallet address")
+      throw new UserError("Please provide a wallet address")
     }
 
     // Check if wallet address is already in use
@@ -58,7 +65,7 @@ export default async function NewPlayerPage() {
     })
 
     if (existingProfile) {
-      throw new Error("This wallet address is already registered")
+      throw new UserError("This wallet address is already registered")
     }
 
     try {
@@ -70,7 +77,7 @@ export default async function NewPlayerPage() {
       })
     } catch (error) {
       console.error("Failed to create player profile:", error)
-      throw new Error("Failed to create player profile")
+      throw new UserError("Failed to create player profile")
     }
 
     redirect("/player")
