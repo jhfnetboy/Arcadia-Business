@@ -48,7 +48,7 @@ export default async function NewPlayerPage() {
     const walletAddress = formData.get("walletAddress") as string
 
     if (!walletAddress) {
-      throw new Error("Wallet address is required")
+      return { error: "Please provide a wallet address" }
     }
 
     // Check if wallet address is already in use
@@ -57,7 +57,7 @@ export default async function NewPlayerPage() {
     })
 
     if (existingProfile) {
-      throw new Error("This wallet address is already registered")
+      return { error: "This wallet address is already registered" }
     }
 
     await prisma.playerProfile.create({
