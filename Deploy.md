@@ -472,13 +472,16 @@ Transaction 表中存在 merchantId，String          @map("merchant_id") 和 me
 4. 显示每个 write_off 且 merchantId 是登录帐号 merchanId 的记录，显示是 +30，是 merchant 的收入
 5. @page.tsx 请修改 sellPrice 为 publishCost 的 1.2 倍，而不是默认的 30
 
-首页整体上移一点，缩小点title和top的边距；town area缩小高度为原来的80%，visit town button 设置为灰蓝色，否则字体看不到
+首页整体上移一点，缩小点 title 和 top 的边距；town area 缩小高度为原来的 80%，visit town button 设置为灰蓝色，否则字体看不到
 
-2.商家页面的verify功能请添加，现在点击没反应：输入优惠券验证码，点击verify，查询显示优惠券的状态、有效期、发行商家和倒计时信息
-3. http://localhost:3000/merchant,Redeemed Coupons 区域和其他的三个区域水平位置不太一致，请检查css
+2.商家页面的 verify 功能请添加，现在点击没反应：输入优惠券验证码，点击 verify，查询显示优惠券的状态、有效期、发行商家和倒计时信息
+3. http://localhost:3000/merchant,Redeemed Coupons 区域和其他的三个区域水平位置不太一致，请检查 css
 
-1.首页的Explore Town区域，当mouse on的时候，请提升背景图的亮度，离开了又变回原来的比较黑的亮度
-2.当未注册merchan profile的时候访问报错：http://localhost:3000/merchant，页面显示loading，应该是提示未发现merchant注册信息，请点击Become merchant button,引导到http://localhost:3000/merchant/new页面
-3.首页如果没有merchant信息，也要显示merchant区域，引导button注册merchant，而不是不显示任何入口
+1.首页的 Explore Town 区域，当 mouse on 的时候，请提升背景图的亮度，离开了又变回原来的比较黑的亮度
+2.当未注册 merchan profile 的时候访问报错：http://localhost:3000/merchant，页面显示 loading，应该是提示未发现 merchant 注册信息，请点击 Become merchant button，引导到 http://localhost:3000/merchant/new 页面
+3.首页如果没有 merchant 信息，也要显示 merchant 区域，引导 button 注册 merchant，而不是不显示任何入口
 
+
+http://localhost:3000/town页面, 
+1. 页面背景色去掉渐变色，改为白色
 
