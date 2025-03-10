@@ -6,8 +6,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
 import BlockchainConnector from '@/components/blockchain-connector'
-import { SessionProvider, useSession } from 'next-auth/react'
-import { auth } from '@/auth'
 
 // 定义英雄数据类型
 interface Hero {
@@ -19,27 +17,24 @@ interface Hero {
   txHash?: string
 }
 
-// 主页面组件
-function PlayGameContent() {
-  const { data: session, status } = useSession()
+// 定义用户类型
+interface User {
+  name?: string | null
+  email?: string | null
+  image?: string | null
+}
+
+// 客户端组件接口
+interface PlayGameClientProps {
+  user: User
+}
+
+export default function PlayGameClient({ user }: PlayGameClientProps) {
   const router = useRouter()
   const [heroName, setHeroName] = useState('')
   const [hero, setHero] = useState<Hero | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [txHash, setTxHash] = useState<string | null>(null)
-
-  // 检查用户是否已登录
-  useEffect(() => {
-    // 只有当状态确定为未认证时才重定向
-    if (status === 'unauthenticated') {
-      console.log('User is not authenticated, redirecting to sign in page')
-      router.push('/auth/signin?callbackUrl=/town/play')
-    } else if (status === 'authenticated' && session?.user) {
-      console.log('User is authenticated:', session.user.email)
-    } else if (status === 'loading') {
-      console.log('Session is loading...')
-    }
-  }, [status, router, session])
 
   // 创建英雄
   const createHero = () => {
@@ -55,7 +50,7 @@ function PlayGameContent() {
       name: heroName,
       points: 0,
       level: 1,
-      userId: session?.user?.email || 'unknown',
+      userId: user.email || 'unknown',
       createdAt: new Date().toISOString()
     }
     
@@ -162,26 +157,15 @@ function PlayGameContent() {
     router.push('/town')
   }
 
-  // 如果会话正在加载，显示加载状态
-  if (status === 'loading') {
-    return (
-      <div className="container mx-auto p-4 text-center">
-        <p className="text-lg">Loading session...</p>
-      </div>
-    )
-  }
-
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-6">Arcadia Game Center</h1>
       
-      {session?.user && (
-        <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-          <p className="text-sm">
-            Logged in as: <strong>{session.user.name || session.user.email}</strong>
-          </p>
-        </div>
-      )}
+      <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+        <p className="text-sm">
+          Logged in as: <strong>{user.name || user.email}</strong>
+        </p>
+      </div>
       
       {!hero ? (
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
@@ -260,13 +244,4 @@ function PlayGameContent() {
       )}
     </div>
   )
-}
-
-// 包装组件，提供 SessionProvider
-export default function PlayGamePage() {
-  return (
-    <SessionProvider refetchInterval={0}>
-      <PlayGameContent />
-    </SessionProvider>
-  )
-}
+} 
