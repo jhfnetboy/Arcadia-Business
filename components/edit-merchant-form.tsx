@@ -6,9 +6,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { useLoadScript, GoogleMap, Marker } from "@react-google-maps/api"
+import { useLoadScript, GoogleMap } from "@react-google-maps/api"
 import type { MerchantProfile } from "@prisma/client"
 import { MultipleImageUpload } from "./image-upload"
+import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 
 const libraries: ("places")[] = ["places"]
 
@@ -30,11 +32,57 @@ export default function EditMerchantForm({ merchant, onSubmit }: EditMerchantFor
   const [address, setAddress] = useState(merchant.address ?? '')
   const [images, setImages] = useState<string[]>(merchant.images)
   const [geocoder, setGeocoder] = useState<google.maps.Geocoder | null>(null)
+  const router = useRouter()
+
+  // Add debug logs
+  console.log('Map ID:', process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID)
+  console.log('API Key:', process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY)
 
   const { isLoaded } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY as string,
     libraries,
+    mapIds: [process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID as string]
   })
+
+  const [map, setMap] = useState<google.maps.Map | null>(null);
+  const [marker, setMarker] = useState<google.maps.Marker | google.maps.marker.AdvancedMarkerElement | null>(null);
+
+  const onMapLoad = async (map: google.maps.Map) => {
+    setMap(map);
+    if (window.google && location) {
+      try {
+        // Import the marker library
+        const markerLib = await google.maps.importLibrary('marker') as google.maps.MarkerLibrary;
+        
+        // Create and set the marker
+        const marker = new markerLib.AdvancedMarkerElement({
+          map,
+          position: location,
+          title: merchant.businessName
+        });
+        setMarker(marker);
+      } catch (error) {
+        console.error('Error creating marker:', error);
+        // Fallback to basic marker if AdvancedMarkerElement is not available
+        const marker = new google.maps.Marker({
+          map,
+          position: location,
+          title: merchant.businessName
+        });
+        setMarker(marker);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (map && marker && location) {
+      if (marker instanceof google.maps.Marker) {
+        marker.setPosition(location);
+      } else {
+        marker.position = location;
+      }
+    }
+  }, [map, marker, location]);
 
   useEffect(() => {
     if (isLoaded) {
@@ -77,26 +125,50 @@ export default function EditMerchantForm({ merchant, onSubmit }: EditMerchantFor
     }
   }
 
-  async function handleSubmit(formData: FormData) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     try {
       if (images.length < 3) {
-        throw new Error("Please upload at least 3 images")
+        throw new Error("Please upload at least 3 images");
       }
+      
+      const formData = new FormData(event.currentTarget);
       
       // Add images to form data
       for (const url of images) {
-        formData.append("images", url)
+        formData.append("images", url);
       }
       
-      await onSubmit(formData)
+      await onSubmit(formData);
     } catch (error) {
-      console.error("Error submitting form:", error)
-      alert(error instanceof Error ? error.message : "An error occurred")
+      console.error("Error submitting form:", error);
+      toast.error(error instanceof Error ? error.message : "An error occurred");
     }
   }
 
+  const renderMap = () => {
+    if (!window.google) return null;
+    
+    return (
+      <GoogleMap
+        zoom={15}
+        center={location}
+        mapContainerClassName="w-full h-[400px] rounded-lg"
+        onClick={handleMapClick}
+        onLoad={onMapLoad}
+        options={{
+          disableDefaultUI: false,
+          zoomControl: true,
+          streetViewControl: false,
+          mapTypeControl: false,
+          mapId: process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID
+        }}
+      />
+    )
+  }
+
   return (
-    <form action={handleSubmit}>
+    <form onSubmit={handleSubmit}>
       <Card>
         <CardHeader>
           <CardTitle>Edit Business Profile</CardTitle>
@@ -138,18 +210,7 @@ export default function EditMerchantForm({ merchant, onSubmit }: EditMerchantFor
 
           <div className="space-y-2">
             <Label>Location</Label>
-            {isLoaded ? (
-              <div className="h-[300px] w-full rounded-md border">
-                <GoogleMap
-                  zoom={13}
-                  center={location}
-                  mapContainerClassName="w-full h-full rounded-md"
-                  onClick={handleMapClick}
-                >
-                  <Marker position={location} />
-                </GoogleMap>
-              </div>
-            ) : (
+            {isLoaded ? renderMap() : (
               <div>Loading map...</div>
             )}
             <input

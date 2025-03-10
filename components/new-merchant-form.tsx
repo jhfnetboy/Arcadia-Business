@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { useLoadScript, GoogleMap, Marker } from "@react-google-maps/api"
+import { useLoadScript, GoogleMap } from "@react-google-maps/api"
 import { useFormStatus } from "react-dom"
 import { MultipleImageUpload } from "./image-upload"
 
@@ -79,10 +79,17 @@ export default function NewMerchantForm({
   const [geocoder, setGeocoder] = useState<google.maps.Geocoder | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [map, setMap] = useState<google.maps.Map | null>(null);
+  const [marker, setMarker] = useState<google.maps.Marker | google.maps.marker.AdvancedMarkerElement | null>(null);
+
+  // Add debug logs
+  console.log('Map ID:', process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID)
+  console.log('API Key:', process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY)
 
   const { isLoaded } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY as string,
     libraries,
+    mapIds: [process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID as string]
   })
 
   useEffect(() => {
@@ -177,32 +184,93 @@ export default function NewMerchantForm({
     }))
   }
 
-  async function handleSubmit(formData: FormData) {
+  const onMapLoad = async (map: google.maps.Map) => {
+    setMap(map);
+    if (window.google && location) {
+      try {
+        // Import the marker library
+        const markerLib = await google.maps.importLibrary('marker') as google.maps.MarkerLibrary;
+        
+        // Create and set the marker
+        const marker = new markerLib.AdvancedMarkerElement({
+          map,
+          position: location,
+          title: formData.businessName || 'New Business'
+        });
+        setMarker(marker);
+      } catch (error) {
+        console.error('Error creating marker:', error);
+        // Fallback to basic marker if AdvancedMarkerElement is not available
+        const marker = new google.maps.Marker({
+          map,
+          position: location,
+          title: formData.businessName || 'New Business'
+        });
+        setMarker(marker);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (map && marker && location) {
+      if (marker instanceof google.maps.Marker) {
+        marker.setPosition(location);
+      } else {
+        marker.position = location;
+      }
+    }
+  }, [map, marker, location]);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     try {
-      setError(null)
+      setError(null);
       if (images.length < 3) {
-        setError("Please upload at least 3 images")
-        return
+        setError("Please upload at least 3 images");
+        return;
       }
 
+      const formData = new FormData(event.currentTarget);
+
       // Add form data values from state
-      formData.set("businessName", formData.get("businessName") as string || '')
-      formData.set("description", formData.get("description") as string || '')
+      formData.set("businessName", formData.get("businessName") as string || '');
+      formData.set("description", formData.get("description") as string || '');
 
       // Add images to form data
       for (const url of images) {
-        formData.append("images", url)
+        formData.append("images", url);
       }
 
-      await onSubmit(formData)
+      await onSubmit(formData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred while registering")
-      console.error("Registration error:", err)
+      setError(err instanceof Error ? err.message : "An error occurred while registering");
+      console.error("Registration error:", err);
     }
   }
 
+  const renderMap = () => {
+    if (!window.google) return null;
+    
+    return (
+      <GoogleMap
+        zoom={15}
+        center={location}
+        mapContainerClassName="w-full h-[400px] rounded-lg"
+        onClick={handleMapClick}
+        onLoad={onMapLoad}
+        options={{
+          disableDefaultUI: false,
+          zoomControl: true,
+          streetViewControl: false,
+          mapTypeControl: false,
+          mapId: process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID
+        }}
+      />
+    )
+  }
+
   return (
-    <form action={handleSubmit}>
+    <form onSubmit={handleSubmit} className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Register as a Merchant</CardTitle>
@@ -251,18 +319,7 @@ export default function NewMerchantForm({
 
           <div className="space-y-2">
             <Label>Location</Label>
-            {isLoaded ? (
-              <div className="h-[300px] w-full rounded-md border">
-                <GoogleMap
-                  zoom={13}
-                  center={location}
-                  mapContainerClassName="w-full h-full rounded-md"
-                  onClick={handleMapClick}
-                >
-                  <Marker position={location} />
-                </GoogleMap>
-              </div>
-            ) : (
+            {isLoaded ? renderMap() : (
               <div>Loading map...</div>
             )}
             <input
