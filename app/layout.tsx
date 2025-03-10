@@ -4,6 +4,7 @@ import { Inter } from "next/font/google"
 import Footer from "@/components/footer"
 import Header from "@/components/header"
 import HtmlCleanup from "@/components/html-cleanup"
+import Script from "next/script"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -15,7 +16,17 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: React.PropsWithChildren) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <Script id="remove-theme-attributes" strategy="beforeInteractive">
+          {`
+            (function() {
+              document.documentElement.removeAttribute('data-theme');
+              document.documentElement.removeAttribute('style');
+            })();
+          `}
+        </Script>
+      </head>
       <body className={inter.className} suppressHydrationWarning>
         <HtmlCleanup />
         <div className="flex h-full min-h-screen w-full flex-col justify-between">
