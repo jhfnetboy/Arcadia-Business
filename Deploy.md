@@ -1,221 +1,26 @@
-import { PrismaClient } from "@prisma/client"
-import { logDatabaseUrl, maskDatabaseUrl, getErrorDetails } from "./utils"
+# How to install
 
-// Safely log database connection URL
-logDatabaseUrl()
-
-// Create Prisma client instance with explicit database URL and connection timeout
-const prismaClientSingleton = () => {
-  return new PrismaClient({
-    datasourceUrl: process.env.DATABASE_URL,
-    // Add connection timeout settings
-    // @ts-ignore - These advanced options might not be included in Prisma types
-    log: ['error', 'warn'],
-    __internal: {
-      engine: {
-        connectionTimeout: 10000, // 10 seconds connection timeout
-        queryEngineTimeout: 10000, // 10 seconds query timeout
-      }
-    }
-  })
-}
-
-type PrismaClientSingleton = ReturnType<typeof prismaClientSingleton>
-
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClientSingleton | undefined
-}
-
-// 安全地记录数据库连接 URL
-logDatabaseUrl(process.env.DATABASE_URL || '')
-
-// 创建 Prisma 客户端实例，显式指定数据库 URL 和连接超时
-export const prisma = globalForPrisma.prisma ?? prismaClientSingleton()
-
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
-
-/**
- * Test database connection
- * Attempts to execute a simple query to verify the connection is working
- */
-export async function testConnection() {
-  // Safely log database URL
-  logDatabaseUrl()
-  
-  try {
-    const result = await prisma.$queryRaw`SELECT 1`
-    console.log('Database connection test successful:', result)
-    return true
-  } catch (error) {
-    console.error('Database connection test failed:', error)
-    return false
-  }
-}
-
-/**
- * 创建一个新的 Prisma 客户端实例，使用不同的连接选项
- * 这对于测试不同的连接参数很有用
- */
-export function createPrismaClient(options: {
-  url?: string;
-  ssl?: boolean | { rejectUnauthorized: boolean };
-  connectionTimeout?: number;
-}) {
-  const { url, ssl = true, connectionTimeout = 10000 } = options
-  
-  // 构建数据库 URL
-  let dbUrl = url || process.env.DATABASE_URL || ''
-  
-  // 如果需要，添加或修改 SSL 参数
-  if (typeof ssl === 'boolean') {
-    if (dbUrl && !dbUrl.includes('sslmode=') && ssl) {
-      dbUrl = `${dbUrl}${dbUrl.includes('?') ? '&' : '?'}sslmode=require`
-    } else if (dbUrl && dbUrl.includes('sslmode=') && !ssl) {
-      dbUrl = dbUrl.replace(/sslmode=require/g, 'sslmode=prefer')
-    }
-  } else if (ssl && !ssl.rejectUnauthorized) {
-    // 禁用 SSL 证书验证
-    if (dbUrl.includes('sslmode=require')) {
-      dbUrl = dbUrl.replace(/sslmode=require/g, 'sslmode=prefer')
-    }
-    if (!dbUrl.includes('sslmode=')) {
-      dbUrl = `${dbUrl}${dbUrl.includes('?') ? '&' : '?'}sslmode=prefer`
-    }
-  }
-  
-  // 安全地记录数据库 URL
-  logDatabaseUrl(dbUrl, '创建新的 Prisma 客户端，URL');
-  
-  return new PrismaClient({
-    datasources: {
-      db: {
-        url: dbUrl,
-      },
-    },
-    log: ['error', 'warn'],
-    // @ts-ignore
-    __internal: {
-      engine: {
-        connectionTimeout,
-        queryEngineTimeout: connectionTimeout,
-      },
-    },
-  })
-} 
-5. Deploy project:
-```bash
-vercel --prod
 ```
+1. 
+pnpm install
+npx prisma generate
+pnpm prisma generate
 
-### 5. GitHub Actions CI/CD Configuration
 
-1. Add the following Secrets to your GitHub repository settings:
-   - `VERCEL_TOKEN`: API token from Vercel
-   - `VERCEL_ORG_ID`: Organization ID from Vercel
-   - `VERCEL_PROJECT_ID`: Project ID from Vercel
+2. clear
+rm -rf node_modules
+rm -rf node_modules/.prisma
+rm -rf .next
+pnpm store prune
 
-2. Ensure `.github/workflows/ci.yml` file is correctly configured:
-```yaml
-name: CI
+3. for local database
+pnpm prisma db pull
+npx prisma generate
+npx ts-node data/seed-categories.ts
+npx ts-node scripts/init-promotion-types.ts
+npx ts-node scripts/recharge-all.ts
 
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: pnpm/action-setup@v2
-      - uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-          cache: 'pnpm'
-      
-      - name: Install dependencies
-        run: pnpm install
-
-      - name: Run tests
-        run: pnpm test
-
-  deploy:
-    needs: test
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: pnpm/action-setup@v2
-      
-      - name: Deploy to Vercel
-        uses: amondnet/vercel-action@v20
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: '--prod'
-```
-
-### 6. Post-deployment Configuration
-
-1. Set custom domain in Vercel console
-2. Configure OAuth providers callback URLs:
-   - Google: `https://your-domain.com/auth/callback/google`
-   - GitHub: `https://your-domain.com/auth/callback/github`
-   - Discord: `https://your-domain.com/auth/callback/discord`
-   - Other providers...
-
-3. Verify all environment variables are set correctly
-4. Test authentication flow and main features
-
-### 7. Middleware Configuration
-
-In `middleware.ts`, we've configured authentication and performance monitoring middleware:
-
-```typescript
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
-import { auth } from "auth"
-
-// Define middleware function
-export function middleware(request: NextRequest) {
-  const start = Date.now()
-  
-  const response = NextResponse.next()
-  
-  // Record request processing time
-  const duration = Date.now() - start
-  console.log(`${request.method} ${request.url} - ${duration}ms`)
-  
-  return response
-}
-
-// Export auth middleware
-export default auth
-
-// Configure middleware matcher
-export const config = {
-  matcher: ["/((?!auth|api|_next/static|_next/image|favicon.ico).*)"],
-}
-```
-
-### 8. Monitoring and Maintenance
-
-1. Set up Vercel Analytics
-2. Configure error monitoring (Sentry optional)
-3. Set up database backup strategy
-4. Monitor database performance
-5. Use the `captureError` function from `lib/monitoring.ts` to log errors:
-```typescript
-export function captureError(error: Error) {
-  // Add error monitoring logic
-  console.error(error)
-  
-  // Can integrate with Sentry or other services
-}
-```
 
 ## 常见问题 / Common Issues
 
@@ -371,6 +176,28 @@ npx prisma migrate dev --name add_image_to_coupon_temp
 7. 创建 hero 后，hero 会出现在 town 页面，并且可以进行管理
 8. 下次登录，自动 loadHero
 9. 至此 town 页面的初始化完成了
+Town 页面交互流程设计
+   1. 独立的页面，登录后携带登录信息，点击首页 town area 进入 town page
+   2. 查询用户是否是 player，显示绑定的钱包地址，在 player profile 表有（登录后是不是有这个信息？），没有则提供引导 button 到 player/new 页面
+   3. 引入 hero-v6 abi 合约和 env 的 nft 地址，hero 合约地址，从 env
+   4. 然后呼叫 metamask 来连接钱包，然后呼叫合约，查询钱包地址的 是否拥有指定 NFT 
+   5. 如果没有 nft，点击 NFT Market 购买 NFT
+   6. 如果有 nft，则查询此 nft id 是否已经有 hero 记录，有则加载显示，调用 loadhero 函数
+   7. 如果没有 hero 记录，则携带 nft 合约地址和 nft id，调用 create hero 创建 hero
+   8. 创建 hero 后，hero 会出现在 town 页面，并且可以进行管理（修改名字，购买技能，购买装备 nft）
+   9. 下次登录，自动 loadHero 上次登录过的 hero 信息卡片，也可以选择多个 hero 中某一个进入游戏
+   10. 然后点击 paly game 到 game 目录页面至此 town 页面的功能 ok
+
+Game 页面集成
+技术方案：Godot 引擎开发，导出为 wasm 和 html 到 game 目录，hero 基础信息从登录获取
+town 页面提供 same game 函数调用
+
+需要增加必要的安全验证
+Mar 10, 05:26:21 PM: 862195fb INFO   prisma:query SELECT "public"."player_profiles"."id", "public"."player_profiles"."user_id", "public"."player_profiles"."wallet_address", "public"."player_profiles"."created_at", "public"."player_profiles"."updated_at", "public"."player_profiles"."points_balance" FROM "public"."player_profiles" WHERE ("public"."player_profiles"."wallet_address" = $1 AND 1=1) LIMIT $2 OFFSET $3Mar 10, 05:26:21 PM: 862195fb ERROR   ⨯ Error: This wallet address is already registered
+    at l (.next/server/app/player/new/page.js:1:1841) {
+  digest: '2328247645'
+}Mar 10, 05:26:21 PM: 862195fb Duration: 897.72 ms	Memory Usage: 202 MB
+
 10. 点击进入 Game 冒险页面，开始冒险，携带基础信息
 11. 冒险过程中，需要消耗能量，能量不足则不能进行冒险
 12. 冒险中获得奖励，根据难度不同，奖励不同
