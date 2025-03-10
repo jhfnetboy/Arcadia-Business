@@ -326,3 +326,25 @@ func save_game(data):
 - **建议**：优先实现 iframe 方案，逐步优化为 SPA 集成，增强安全性（HTTPS、域名限制）和性能（压缩资源）。
 
 如果需要更详细的代码实现或特定功能（如 NextAuth 集成），请告诉我，我可以进一步协助！
+
+
+
+进入 Town 页面：
+登录后，导航到 Town 页面
+点击 "Play Game" 按钮
+创建英雄：
+在游戏页面，输入英雄名称（例如 "MyHero"）
+点击 "Create Hero" 按钮
+玩游戏：
+英雄创建后，游戏会在 iframe 中加载
+游戏会通过 postMessage 接收英雄数据
+在游戏中进行操作，获取点数等
+保存游戏数据：
+在游戏中点击 "Save Game" 按钮
+数据会发送回平台并保存到数据库
+页面上的英雄信息会更新
+区块链保存（可选）：
+点击 "Connect MetaMask" 按钮连接钱包
+连接成功后，点击 "Save Hero to Blockchain"
+在 MetaMask 弹窗中确认签名
+交易哈希会显示在英雄信息中

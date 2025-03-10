@@ -1,12 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
 import BlockchainConnector from '@/components/blockchain-connector'
+import { SessionProvider, useSession } from 'next-auth/react'
 
 // 定义英雄数据类型
 interface Hero {
@@ -18,7 +18,8 @@ interface Hero {
   txHash?: string
 }
 
-export default function PlayGamePage() {
+// 主页面组件
+function PlayGameContent() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [heroName, setHeroName] = useState('')
@@ -234,5 +235,14 @@ export default function PlayGamePage() {
         </div>
       )}
     </div>
+  )
+}
+
+// 包装组件，提供 SessionProvider
+export default function PlayGamePage() {
+  return (
+    <SessionProvider>
+      <PlayGameContent />
+    </SessionProvider>
   )
 } 
