@@ -50,6 +50,7 @@ model User {
   playerProfile   PlayerProfile?
   sessions        Session[]
   transactions    Transaction[]
+  heroData        HeroData[]
 
   @@map("users")
 }
@@ -196,4 +197,19 @@ model Transaction {
   user       User            @relation(fields: [userId], references: [id])
 
   @@map("transactions")
+}
+
+model HeroData {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  name      String
+  points    Int      @default(0)
+  level     Int      @default(1)
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, name])
+  @@map("hero_data")
 }

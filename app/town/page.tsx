@@ -54,6 +54,9 @@ export default async function TownPage() {
           <Link href="/town/aptos">
             <Button className="w-full h-16 text-lg">Aptos</Button>
           </Link>
+          <Link href="/town/play">
+            <Button className="w-full h-16 text-lg bg-green-600 hover:bg-green-700">Play Game</Button>
+          </Link>
         </div>
       </div>
     </div>
