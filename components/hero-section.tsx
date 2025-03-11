@@ -83,58 +83,142 @@ export default function HeroSection({ user }: HeroSectionProps) {
       
       // 使用 window.ethereum 请求
       const provider = new ethers.providers.Web3Provider(window.ethereum as any);
-      const nftContract = new ethers.Contract(
-        ETHEREUM_CONTRACTS.HERO_NFT_ADDRESS,
-        ERC721_ABI,
-        provider
-      );
       
-      // 检查用户是否拥有NFT
-      const balance = await nftContract.balanceOf(address);
+      // 检查合约地址是否有效
+      if (!ETHEREUM_CONTRACTS.HERO_NFT_ADDRESS || ETHEREUM_CONTRACTS.HERO_NFT_ADDRESS === '0x0000000000000000000000000000000000000000') {
+        console.error('Invalid NFT contract address');
+        setIsLoading(false);
+        return;
+      }
       
-      if (balance.toNumber() > 0) {
-        // 获取用户的第一个NFT的tokenId
-        const tokenId = await nftContract.tokenOfOwnerByIndex(address, 0);
+      // 检查网络是否正确
+      try {
+        const network = await provider.getNetwork();
+        console.log('Current network:', network.name, network.chainId);
+      } catch (networkError) {
+        console.error('Error checking network:', networkError);
+      }
+      
+      try {
+        // 创建合约实例
+        const nftContract = new ethers.Contract(
+          ETHEREUM_CONTRACTS.HERO_NFT_ADDRESS,
+          ERC721_ABI,
+          provider
+        );
         
-        // 获取NFT的元数据URI
-        const tokenURI = await nftContract.tokenURI(tokenId);
-        
-        // 获取元数据
-        let metadata = {};
+        // 检查合约是否存在
         try {
-          // 如果tokenURI是IPFS链接，需要转换为HTTP链接
-          const url = tokenURI.replace('ipfs://', 'https://ipfs.io/ipfs/');
-          const metadataResponse = await fetch(url);
-          metadata = await metadataResponse.json();
-        } catch (error) {
-          console.error('Error fetching metadata:', error);
-          metadata = { name: `Hero #${tokenId.toString()}`, attributes: [] };
+          const code = await provider.getCode(ETHEREUM_CONTRACTS.HERO_NFT_ADDRESS);
+          if (code === '0x') {
+            console.error('Contract does not exist at the specified address');
+            setIsLoading(false);
+            return;
+          }
+        } catch (contractError) {
+          console.error('Error checking contract existence:', contractError);
+          setIsLoading(false);
+          return;
         }
         
-        // 创建英雄对象
-        const blockchainHero: Hero = {
-          name: (metadata as any).name || `Hero #${tokenId.toString()}`,
-          points: 0,
-          level: 1,
-          userId: user.email || 'unknown',
-          createdAt: new Date().toISOString(),
-          tokenId: tokenId.toString()
-        };
-        
-        setHero(blockchainHero);
-        
-        // 保存到API
+        // 检查用户是否拥有NFT
+        let balance;
         try {
-          await fetch('/api/hero/save', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(blockchainHero),
-          });
-        } catch (error) {
-          console.error('Error saving hero to API:', error);
+          balance = await nftContract.balanceOf(address);
+          console.log('NFT balance:', balance.toString());
+        } catch (balanceError) {
+          console.error('Error checking NFT balance:', balanceError);
+          setIsLoading(false);
+          return;
         }
+        
+        if (balance && balance.toNumber() > 0) {
+          // 获取用户的第一个NFT的tokenId
+          let tokenId;
+          try {
+            tokenId = await nftContract.tokenOfOwnerByIndex(address, 0);
+            console.log('Token ID:', tokenId.toString());
+          } catch (tokenError) {
+            console.error('Error getting token ID:', tokenError);
+            
+            // 创建一个默认的英雄，因为用户确实拥有NFT，但我们无法获取tokenId
+            const defaultHero: Hero = {
+              name: `Hero of ${address.substring(0, 6)}`,
+              points: 0,
+              level: 1,
+              userId: user.email || 'unknown',
+              createdAt: new Date().toISOString()
+            };
+            
+            setHero(defaultHero);
+            setIsLoading(false);
+            return;
+          }
+          
+          // 获取NFT的元数据URI
+          let tokenURI;
+          try {
+            tokenURI = await nftContract.tokenURI(tokenId);
+            console.log('Token URI:', tokenURI);
+          } catch (uriError) {
+            console.error('Error getting token URI:', uriError);
+            
+            // 创建一个基于tokenId的英雄
+            const tokenIdHero: Hero = {
+              name: `Hero #${tokenId.toString()}`,
+              points: 0,
+              level: 1,
+              userId: user.email || 'unknown',
+              createdAt: new Date().toISOString(),
+              tokenId: tokenId.toString()
+            };
+            
+            setHero(tokenIdHero);
+            setIsLoading(false);
+            return;
+          }
+          
+          // 获取元数据
+          let metadata = {};
+          try {
+            // 如果tokenURI是IPFS链接，需要转换为HTTP链接
+            const url = tokenURI.replace('ipfs://', 'https://ipfs.io/ipfs/');
+            const metadataResponse = await fetch(url);
+            metadata = await metadataResponse.json();
+          } catch (error) {
+            console.error('Error fetching metadata:', error);
+            metadata = { name: `Hero #${tokenId.toString()}`, attributes: [] };
+          }
+          
+          // 创建英雄对象
+          const blockchainHero: Hero = {
+            name: (metadata as any).name || `Hero #${tokenId.toString()}`,
+            points: 0,
+            level: 1,
+            userId: user.email || 'unknown',
+            createdAt: new Date().toISOString(),
+            tokenId: tokenId.toString()
+          };
+          
+          setHero(blockchainHero);
+          
+          // 保存到API
+          try {
+            await fetch('/api/hero/save', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(blockchainHero),
+            });
+          } catch (error) {
+            console.error('Error saving hero to API:', error);
+          }
+        } else {
+          console.log('User has no NFTs');
+        }
+      } catch (contractError) {
+        console.error('Error interacting with contract:', contractError);
       }
     } catch (error) {
       console.error('Error loading hero from blockchain:', error);
