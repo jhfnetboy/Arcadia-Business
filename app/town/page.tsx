@@ -4,8 +4,8 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import WalletSection from "@/components/wallet-section"
-import HeroSection from "@/components/hero-section"
-
+import HeroSection from "../../components/hero-section"
+import NFTSection from "../../components/nft-section"
 export default async function TownPage() {
   const session = await auth()
   
@@ -42,23 +42,8 @@ export default async function TownPage() {
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
         {/* Your NFTs Section */}
-        <Card className="h-64">
-          <CardHeader>
-            <CardTitle>Your NFTs</CardTitle>
-            <CardDescription>View and manage your NFT collection</CardDescription>
-          </CardHeader>
-          <CardContent className="h-24 flex items-center justify-center">
-            <p className="text-muted-foreground">No NFTs found</p>
-          </CardContent>
-          <CardFooter>
-            <Link href="/town/ethereum">
-              <Button className="w-full">View NFTs</Button>
-            </Link>
-          </CardFooter>
-        </Card>
-        
-        {/* Your Heroes Section */}
-        <HeroSection user={session.user} />
+        {/* NFT Section - Using the new NFTSection component */}
+        <NFTSection />
         
         {/* Your Assets Section */}
         <Card className="h-64">
