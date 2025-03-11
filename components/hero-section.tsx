@@ -68,6 +68,16 @@ export default function HeroSection({ user }: HeroSectionProps) {
   const addDebugInfo = (info: string) => {
     console.log(info);
     setDebugInfo(prev => [...prev, `${new Date().toLocaleTimeString()}: ${info}`]);
+    
+    // 同时添加到全局调试区域
+    const debugContainer = document.getElementById('debug-container');
+    if (debugContainer) {
+      const debugElement = document.createElement('p');
+      debugElement.className = 'mb-1';
+      debugElement.textContent = `${new Date().toLocaleTimeString()}: ${info}`;
+      debugContainer.appendChild(debugElement);
+      debugContainer.scrollTop = debugContainer.scrollHeight;
+    }
   };
 
   // 监听钱包连接事件
@@ -502,8 +512,11 @@ export default function HeroSection({ user }: HeroSectionProps) {
       }
     };
     
-    loadHeroInfo();
-  }, [selectedNft, ethereumAddress, user.email]);
+    if (selectedNft && ethereumAddress) {
+      addDebugInfo(`Triggering loadHeroInfo for token ID: ${selectedNft.tokenId}`);
+      loadHeroInfo();
+    }
+  }, [selectedNft, ethereumAddress, ETHEREUM_CONTRACTS.HERO_NFT_ADDRESS, ETHEREUM_CONTRACTS.HERO_ADDRESS]);
 
   // 保存英雄到 API
   const saveHero = async (hero: Hero) => {
@@ -639,7 +652,10 @@ export default function HeroSection({ user }: HeroSectionProps) {
         
         <CardFooter>
           {hero ? (
-            <Link href="/town/play" className="w-full">
+            <Link 
+              href={`/town/play?heroId=${hero.tokenId}&heroName=${encodeURIComponent(hero.name)}&heroLevel=${hero.level}&heroPoints=${hero.points}&network=ethereum`}
+              className="w-full"
+            >
               <Button className="w-full bg-green-600 hover:bg-green-700">
                 Play Game
               </Button>

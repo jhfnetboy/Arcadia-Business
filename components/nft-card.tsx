@@ -27,6 +27,7 @@ const NFTCard: React.FC<NFTCardProps> = ({
 }) => {
   const handleClick = (nft: NFT) => {
     console.log('NFT card clicked:', nft.tokenId);
+    console.log('NFT details:', JSON.stringify(nft));
     onSelectNft(nft);
   };
 

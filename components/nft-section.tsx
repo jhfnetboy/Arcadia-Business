@@ -38,6 +38,16 @@ export default function NFTSection() {
   const addDebugInfo = (info: string) => {
     console.log(info);
     setDebugInfo(prev => [...prev, `${new Date().toLocaleTimeString()}: ${info}`]);
+    
+    // 同时添加到全局调试区域
+    const debugContainer = document.getElementById('debug-container');
+    if (debugContainer) {
+      const debugElement = document.createElement('p');
+      debugElement.className = 'mb-1';
+      debugElement.textContent = `${new Date().toLocaleTimeString()}: ${info}`;
+      debugContainer.appendChild(debugElement);
+      debugContainer.scrollTop = debugContainer.scrollHeight;
+    }
   };
 
   // 处理NFT选择

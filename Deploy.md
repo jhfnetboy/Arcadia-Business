@@ -325,3 +325,36 @@ NFT 查询：
 使用环境变量中的合约地址（VITE_HERO_NFT_ADDRESS 或 VITE_MOVE_HERO_NFT_ADDRESS）
 如果找到 NFT，会在 Town 页面的 NFT 区域显示
 现在，当用户点击以太坊或 Aptos 连接按钮时，系统应该能够正确连接钱包并查询相应的 NFT 合约。
+
+1. got errors, it does't matter, right?: Console Error
+
+
+Error getting Transfer events: {}
+
+components/hero-section.tsx (303:23) @ HeroSection.useEffect.loadNFTs
+
+
+  301 |               }
+  302 |             } catch (eventsError) {
+> 303 |               console.error('Error getting Transfer events:', eventsError);
+      |                       ^
+  304 |               addDebugInfo(`Error getting Transfer events: ${JSON.stringify(eventsError) || 'Unknown error'}`);
+  305 |               
+  306 |               // 方法 3: 如果前两种方法都失败，创建一些模拟的 NFT 数据用于测试
+Call Stack
+4
+
+Show 3 ignore-listed frames
+HeroSection.useEffect.loadNFTs
+
+
+2. I decide to split Ethereum and aptos into two pages, if you enter town page, load Ethereum default, but show a aptos network button to access aptos page.
+the two town page are the same content, created by same components, but connect to different network.
+pls help me to create this. 
+don't forget splite the wallet connect component into ethereum and aptos two parts for different pages.
+
+3. move all Debug Info into the debug area in town page bottom. show the debug info go on.
+
+4.if found a hero by nft id, click play, go to http://localhost:3000/town/play, but the hero info does't transfer to the play page, pls fix it
+
+5. don't forget, there will be one play page, different hero info is the entrance, the same saveHero function handle the different chain saving.

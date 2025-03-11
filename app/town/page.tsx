@@ -37,8 +37,15 @@ export default async function TownPage() {
           <p>Hello, {session.user.name || session.user.email}</p>
         </div>
         
-        {/* Wallet Connection Section */}
-        <WalletSection />
+        <div className="flex items-center space-x-4">
+          {/* Network Switch Button */}
+          <Link href="/town/aptos">
+            <Button variant="outline">Switch to Aptos</Button>
+          </Link>
+          
+          {/* Wallet Connection Section */}
+          <WalletSection />
+        </div>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
@@ -77,6 +84,14 @@ export default async function TownPage() {
             <Button className="w-full" disabled>Visit Shop</Button>
           </CardFooter>
         </Card>
+      </div>
+      
+      {/* Debug Info Area */}
+      <div className="mt-8 p-4 bg-gray-50 border border-gray-200 rounded-md">
+        <h3 className="text-lg font-medium mb-2">Debug Information</h3>
+        <div id="debug-container" className="text-xs text-gray-700 max-h-60 overflow-y-auto">
+          <p>Debug information will appear here</p>
+        </div>
       </div>
     </div>
   )
