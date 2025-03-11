@@ -64,10 +64,10 @@ export default function PlayGameClient({ user }: PlayGameClientProps) {
   // 当英雄数据变化时，通过 postMessage 发送到游戏
   useEffect(() => {
     if (hero && gameLoaded) {
-      const iframe = document.getElementById('game-iframe') as HTMLIFrameElement
-      
-      // 确保 iframe 已加载
-      const sendDataToGame = () => {
+      try {
+        const iframe = document.getElementById('game-iframe') as HTMLIFrameElement
+        
+        // 确保 iframe 已加载并且可以访问
         if (iframe && iframe.contentWindow) {
           // 发送英雄数据到游戏
           iframe.contentWindow.postMessage({
@@ -76,20 +76,11 @@ export default function PlayGameClient({ user }: PlayGameClientProps) {
           }, '*') // 在生产环境中应该指定确切的域名
           
           console.log('Hero data sent to game:', hero)
+        } else {
+          console.warn('Game iframe not ready yet')
         }
-      }
-      
-      // 如果 iframe 已加载，直接发送数据
-      if (iframe && iframe.contentWindow) {
-        sendDataToGame()
-      } else {
-        // 否则等待 iframe 加载完成
-        iframe?.addEventListener('load', sendDataToGame)
-      }
-      
-      // 清理函数
-      return () => {
-        iframe?.removeEventListener('load', sendDataToGame)
+      } catch (error) {
+        console.error('Error sending data to game:', error)
       }
     }
   }, [hero, gameLoaded])
@@ -97,37 +88,67 @@ export default function PlayGameClient({ user }: PlayGameClientProps) {
   // 监听来自游戏的消息
   useEffect(() => {
     const handleGameMessage = async (event: MessageEvent) => {
-      // 验证消息来源（在生产环境中应该更严格）
-      
-      const data = event.data
-      
-      // 处理保存英雄数据的消息
-      if (data && data.type === 'SAVE_HERO') {
-        console.log('Received save request from game:', data.payload)
+      try {
+        // 验证消息来源（在生产环境中应该更严格）
+        const data = event.data
         
-        try {
-          // 调用 API 保存英雄数据
-          const response = await fetch('/api/hero/save', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data.payload),
-          })
+        // 处理游戏加载完成的消息
+        if (data && data.type === 'GAME_LOADED') {
+          console.log('Game reported as loaded')
+          setGameLoaded(true)
           
-          const result = await response.json()
-          
-          if (result.success) {
-            toast.success('Hero data saved successfully!')
-            // 更新本地英雄数据
-            setHero(data.payload as Hero)
-          } else {
-            toast.error('Failed to save hero data')
+          // 如果已经有英雄数据，发送到游戏
+          if (hero) {
+            try {
+              const iframe = document.getElementById('game-iframe') as HTMLIFrameElement
+              if (iframe && iframe.contentWindow) {
+                iframe.contentWindow.postMessage({
+                  type: 'HERO_DATA',
+                  payload: hero
+                }, '*')
+                console.log('Hero data sent to game after GAME_LOADED message:', hero)
+              }
+            } catch (error) {
+              console.error('Error sending data to game after GAME_LOADED:', error)
+            }
           }
-        } catch (error) {
-          console.error('Error saving hero data:', error)
-          toast.error('Error saving hero data')
         }
+        
+        // 处理保存英雄数据的消息
+        if (data && data.type === 'SAVE_HERO') {
+          console.log('Received save request from game:', data.payload)
+          
+          try {
+            // 调用 API 保存英雄数据
+            const response = await fetch('/api/hero/save', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(data.payload),
+            })
+            
+            const result = await response.json()
+            
+            if (result.success) {
+              toast.success('Hero data saved successfully!')
+              // 更新本地英雄数据
+              setHero(data.payload as Hero)
+            } else {
+              toast.error('Failed to save hero data')
+            }
+          } catch (error) {
+            console.error('Error saving hero data:', error)
+            toast.error('Error saving hero data')
+          }
+        }
+        
+        // 处理英雄数据接收确认消息
+        if (data && data.type === 'HERO_DATA_RECEIVED') {
+          console.log('Game confirmed receipt of hero data')
+        }
+      } catch (error) {
+        console.error('Error processing game message:', error)
       }
     }
     
@@ -138,7 +159,7 @@ export default function PlayGameClient({ user }: PlayGameClientProps) {
     return () => {
       window.removeEventListener('message', handleGameMessage)
     }
-  }, [])
+  }, [hero])
 
   // 处理区块链保存完成
   const handleBlockchainSaveComplete = (hash: string) => {
@@ -158,17 +179,24 @@ export default function PlayGameClient({ user }: PlayGameClientProps) {
     console.log('Game iframe loaded')
     setGameLoaded(true)
     
-    // 如果已经有英雄数据，发送到游戏
-    if (hero) {
-      const iframe = document.getElementById('game-iframe') as HTMLIFrameElement
-      if (iframe && iframe.contentWindow) {
-        iframe.contentWindow.postMessage({
-          type: 'HERO_DATA',
-          payload: hero
-        }, '*')
-        console.log('Hero data sent to game after load:', hero)
+    // 延迟一点时间再发送数据，确保桥接页面已完全加载
+    setTimeout(() => {
+      // 如果已经有英雄数据，发送到游戏
+      if (hero) {
+        try {
+          const iframe = document.getElementById('game-iframe') as HTMLIFrameElement
+          if (iframe && iframe.contentWindow) {
+            iframe.contentWindow.postMessage({
+              type: 'HERO_DATA',
+              payload: hero
+            }, '*')
+            console.log('Hero data sent to game after load:', hero)
+          }
+        } catch (error) {
+          console.error('Error sending data to game after load:', error)
+        }
       }
-    }
+    }, 500) // 延迟500毫秒
   }
 
   return (
