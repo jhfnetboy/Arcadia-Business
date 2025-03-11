@@ -12,6 +12,7 @@ import { ETHEREUM_CONTRACTS } from '@/lib/constants'
 import { ethers } from 'ethers'
 import { heroAbi } from '@/public/ABI/hero.js'
 import NFTCard from './nft-card'
+import { useHero } from '@/lib/hero-context'
 
 // ERC721 ABI with Transfer event
 const ERC721_ABI = [
@@ -39,6 +40,7 @@ interface Hero {
   createdAt: string
   tokenId?: string
   txHash?: string
+  network: string
 }
 
 interface NFT {
@@ -63,6 +65,7 @@ export default function HeroSection({ user }: HeroSectionProps) {
   const [heroNotFound, setHeroNotFound] = useState(false)
   const [debugInfo, setDebugInfo] = useState<string[]>([])
   const { ethereumAddress, aptosAddress, currentNetwork } = useBlockchainWallet()
+  const { setHero: setGlobalHero } = useHero()
 
   // 添加调试信息
   const addDebugInfo = (info: string) => {
@@ -469,10 +472,12 @@ export default function HeroSection({ user }: HeroSectionProps) {
                   level: heroInfo.level ? parseInt(heroInfo.level.toString()) : 1,
                   userId: user.email || 'unknown',
                   createdAt: new Date().toISOString(),
-                  tokenId: selectedNft.tokenId
+                  tokenId: selectedNft.tokenId,
+                  network: 'ethereum'
                 };
                 
                 setHero(newHero);
+                setGlobalHero(newHero);
                 setHeroNotFound(false);
               } catch (contractError) {
                 console.error('Error getting hero from contract:', contractError);
@@ -520,9 +525,10 @@ export default function HeroSection({ user }: HeroSectionProps) {
 
   // 保存英雄到 API
   const saveHero = async (hero: Hero) => {
+    setIsCreating(true)
+    
     try {
-      setIsCreating(true);
-      addDebugInfo(`Saving hero: ${JSON.stringify(hero)}`);
+      addDebugInfo(`Saving hero to API: ${JSON.stringify(hero)}`)
       
       const response = await fetch('/api/heroes', {
         method: 'POST',
@@ -530,27 +536,35 @@ export default function HeroSection({ user }: HeroSectionProps) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(hero),
-      });
+      })
       
       if (!response.ok) {
-        const error = `API error: ${response.status}`;
-        addDebugInfo(error);
-        throw new Error(error);
+        const error = `API error: ${response.status}`
+        addDebugInfo(error)
+        throw new Error(error)
       }
       
-      const result = await response.json();
-      addDebugInfo(`Hero saved successfully: ${JSON.stringify(result)}`);
-      setHero(hero);
-      setHeroNotFound(false);
-      return result;
+      const result = await response.json()
+      addDebugInfo(`Hero saved successfully: ${JSON.stringify(result)}`)
+      
+      // 添加网络信息
+      const heroWithNetwork = {
+        ...hero,
+        network: 'ethereum'
+      }
+      
+      setHero(heroWithNetwork)
+      setGlobalHero(heroWithNetwork) // 设置全局英雄
+      setHeroNotFound(false)
+      return result
     } catch (error) {
-      console.error('Error saving hero:', error);
-      addDebugInfo(`Error saving hero: ${error instanceof Error ? error.message : String(error)}`);
-      throw error;
+      console.error('Error saving hero:', error)
+      addDebugInfo(`Error saving hero: ${error instanceof Error ? error.message : String(error)}`)
+      throw error
     } finally {
-      setIsCreating(false);
+      setIsCreating(false)
     }
-  };
+  }
 
   // 创建英雄
   const createHero = () => {
@@ -562,7 +576,8 @@ export default function HeroSection({ user }: HeroSectionProps) {
       level: 1,
       userId: user.email || 'unknown',
       createdAt: new Date().toISOString(),
-      tokenId: selectedNft.tokenId
+      tokenId: selectedNft.tokenId,
+      network: 'ethereum'
     };
     
     addDebugInfo(`Creating hero: ${JSON.stringify(newHero)}`);
@@ -597,16 +612,6 @@ export default function HeroSection({ user }: HeroSectionProps) {
                     {heroNotFound && (
                       <p className="text-xs mt-2">No hero found for this NFT. You can create a new one.</p>
                     )}
-                  </div>
-                )}
-                
-                {/* 调试信息 */}
-                {debugInfo.length > 0 && (
-                  <div className="p-3 bg-gray-50 border border-gray-200 rounded-md text-xs text-gray-700 max-h-40 overflow-y-auto">
-                    <p className="font-medium mb-1">Debug Info:</p>
-                    {debugInfo.map((info, index) => (
-                      <p key={index} className="mb-1">{info}</p>
-                    ))}
                   </div>
                 )}
                 
@@ -653,8 +658,9 @@ export default function HeroSection({ user }: HeroSectionProps) {
         <CardFooter>
           {hero ? (
             <Link 
-              href={`/town/play?heroId=${hero.tokenId}&heroName=${encodeURIComponent(hero.name)}&heroLevel=${hero.level}&heroPoints=${hero.points}&network=ethereum`}
+              href="/town/play"
               className="w-full"
+              onClick={() => setGlobalHero({...hero, network: 'ethereum'})}
             >
               <Button className="w-full bg-green-600 hover:bg-green-700">
                 Play Game

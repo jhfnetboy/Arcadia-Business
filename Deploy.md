@@ -358,3 +358,12 @@ don't forget splite the wallet connect component into ethereum and aptos two par
 4.if found a hero by nft id, click play, go to http://localhost:3000/town/play, but the hero info does't transfer to the play page, pls fix it
 
 5. don't forget, there will be one play page, different hero info is the entrance, the same saveHero function handle the different chain saving.
+
+----
+
+1. remove Debug Info from Your NFTs and Your Heroes area
+2. splite blockchain wallet into two part: etherem and aptos, support metamask and petra. use it in the page top and keep status
+3. click play and access url :http://localhost:3000/town/play?heroId=3&heroName=2-19-2&heroLevel=1&heroPoints=0&network=ethereum, but got no hero info shown in game play page, so we can use like react context sharing mechanism, url will leak privacy and not security
+4. remove wallet connect from town page and play page, add a global wallet connect in the page top, all pages share the wallet connect and context.
+if go to town page, default page is ethereum page, click the aptos link, goto aptos page.
+all pages use the wallet connect info(wallet address, balance)

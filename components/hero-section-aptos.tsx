@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input'
 import { useBlockchainWallet } from './blockchain-wallet'
 import { APTOS_CONTRACTS } from '@/lib/constants'
+import { useHero } from '@/lib/hero-context'
 
 // 用户类型定义
 interface User {
@@ -25,6 +26,7 @@ interface Hero {
   createdAt: string
   tokenId?: string
   txHash?: string
+  network: string
 }
 
 // NFT 类型定义
@@ -41,6 +43,7 @@ interface HeroSectionProps {
 
 export default function HeroSectionAptos({ user }: HeroSectionProps) {
   const { aptosAddress, currentNetwork } = useBlockchainWallet()
+  const { setHero: setGlobalHero } = useHero()
   
   const [hero, setHero] = useState<Hero | null>(null)
   const [selectedNft, setSelectedNft] = useState<NFT | null>(null)
@@ -192,8 +195,14 @@ export default function HeroSectionAptos({ user }: HeroSectionProps) {
       const result = await response.json()
       addDebugInfo(`Hero saved successfully: ${JSON.stringify(result)}`)
       
-      // 更新英雄状态
-      setHero(result)
+      // 添加网络信息
+      const heroWithNetwork = {
+        ...hero,
+        network: 'aptos'
+      }
+      
+      setHero(heroWithNetwork)
+      setGlobalHero(heroWithNetwork) // 设置全局英雄
       setHeroNotFound(false)
       return result
     } catch (error) {
@@ -215,7 +224,8 @@ export default function HeroSectionAptos({ user }: HeroSectionProps) {
       level: 1,
       userId: user.email || 'unknown',
       createdAt: new Date().toISOString(),
-      tokenId: selectedNft.tokenId
+      tokenId: selectedNft.tokenId,
+      network: 'aptos'
     }
     
     addDebugInfo(`Creating hero: ${JSON.stringify(newHero)}`)
@@ -235,6 +245,17 @@ export default function HeroSectionAptos({ user }: HeroSectionProps) {
         
         <CardContent>
           <div className="space-y-4">
+            {/* 合约错误信息 */}
+            {contractError && (
+              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-800">
+                <p className="font-medium">Contract Error</p>
+                <p className="text-xs mt-1">{contractError}</p>
+                {heroNotFound && (
+                  <p className="text-xs mt-2">No hero found for this NFT. You can create a new one.</p>
+                )}
+              </div>
+            )}
+            
             {/* 英雄信息 */}
             {isLoading && selectedNft ? (
               <div className="flex items-center justify-center h-24">
@@ -242,18 +263,6 @@ export default function HeroSectionAptos({ user }: HeroSectionProps) {
               </div>
             ) : (
               <div className="space-y-4">
-                {/* 合约错误信息 */}
-                {contractError && (
-                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-800">
-                    <p className="font-medium">Contract Error</p>
-                    <p className="text-xs mt-1">{contractError}</p>
-                    {heroNotFound && (
-                      <p className="text-xs mt-2">No hero found for this NFT. You can create a new one.</p>
-                    )}
-                  </div>
-                )}
-                
-                {/* 英雄信息 */}
                 {hero ? (
                   <div className="space-y-2">
                     <div className="p-4 bg-gray-50 rounded-lg">
@@ -296,8 +305,9 @@ export default function HeroSectionAptos({ user }: HeroSectionProps) {
         <CardFooter>
           {hero ? (
             <Link 
-              href={`/town/play?heroId=${hero.tokenId}&heroName=${encodeURIComponent(hero.name)}&heroLevel=${hero.level}&heroPoints=${hero.points}&network=aptos`}
+              href="/town/play"
               className="w-full"
+              onClick={() => setGlobalHero({...hero, network: 'aptos'})}
             >
               <Button className="w-full bg-green-600 hover:bg-green-700">
                 Play Game

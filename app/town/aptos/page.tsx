@@ -3,7 +3,7 @@ import { redirect } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import WalletSection from "@/components/wallet-section-aptos"
+import GlobalWalletConnect from "@/components/global-wallet-connect"
 import HeroSection from "../../../components/hero-section-aptos"
 import NFTSection from "../../../components/nft-section-aptos"
 
@@ -43,8 +43,8 @@ export default async function AptosTownPage() {
             <Button variant="outline">Switch to Ethereum</Button>
           </Link>
           
-          {/* Wallet Connection Section */}
-          <WalletSection />
+          {/* Global Wallet Connection */}
+          <GlobalWalletConnect />
         </div>
       </div>
       
