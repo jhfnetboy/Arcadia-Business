@@ -9,9 +9,19 @@ interface PetraConnectorProps {
   tokenSymbol?: string
 }
 
+// 为 window.aptos 添加类型定义
+interface Aptos {
+  connect: () => Promise<any>
+  disconnect: () => Promise<any>
+  isConnected: () => Promise<boolean>
+  account: () => Promise<{ address: string }>
+  getAccountResources: (address: string) => Promise<any[]>
+}
+
+// 扩展 Window 接口
 declare global {
   interface Window {
-    aptos?: any
+    aptos?: Aptos
   }
 }
 
@@ -26,7 +36,7 @@ export default function PetraConnector({
   // 检查是否已连接
   useEffect(() => {
     const checkConnection = async () => {
-      if (window.aptos) {
+      if (typeof window !== 'undefined' && window.aptos) {
         try {
           const isConnected = await window.aptos.isConnected()
           if (isConnected) {
@@ -45,10 +55,13 @@ export default function PetraConnector({
 
   // 监听账户变化
   useEffect(() => {
-    if (!window.aptos) return
+    if (typeof window === 'undefined' || !window.aptos) return
 
     const handleAccountChange = async () => {
       try {
+        // 确保 window.aptos 存在
+        if (!window.aptos) return
+        
         const isConnected = await window.aptos.isConnected()
         if (isConnected) {
           const account = await window.aptos.account()
@@ -74,7 +87,7 @@ export default function PetraConnector({
 
   // 连接 Petra 钱包
   const connectWallet = async () => {
-    if (!window.aptos) {
+    if (typeof window === 'undefined' || !window.aptos) {
       toast.error('Petra wallet not installed. Please install Petra wallet first.')
       return
     }
@@ -97,7 +110,7 @@ export default function PetraConnector({
 
   // 断开连接
   const disconnectWallet = async () => {
-    if (window.aptos) {
+    if (typeof window !== 'undefined' && window.aptos) {
       try {
         await window.aptos.disconnect()
         setAddress(null)
@@ -112,7 +125,7 @@ export default function PetraConnector({
 
   // 查询代币余额
   const fetchBalance = async (walletAddress: string) => {
-    if (!tokenAddress || !walletAddress || !window.aptos) return
+    if (!tokenAddress || !walletAddress || typeof window === 'undefined' || !window.aptos) return
 
     try {
       // 查询 Aptos 代币余额

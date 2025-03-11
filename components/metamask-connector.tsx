@@ -9,9 +9,19 @@ interface MetamaskConnectorProps {
   tokenSymbol?: string
 }
 
+// 为 window.ethereum 添加类型定义
+interface Ethereum {
+  request: (args: any) => Promise<any>
+  on: (event: string, callback: any) => void
+  removeListener: (event: string, callback: any) => void
+  selectedAddress?: string
+  isConnected?: () => boolean
+}
+
+// 扩展 Window 接口
 declare global {
   interface Window {
-    ethereum?: any
+    ethereum?: Ethereum
   }
 }
 
@@ -52,7 +62,9 @@ export default function MetamaskConnector({
     window.ethereum.on('accountsChanged', handleAccountsChanged)
 
     return () => {
-      window.ethereum.removeListener('accountsChanged', handleAccountsChanged)
+      if (window.ethereum) {
+        window.ethereum.removeListener('accountsChanged', handleAccountsChanged)
+      }
     }
   }, [])
 
@@ -87,7 +99,7 @@ export default function MetamaskConnector({
 
   // 查询代币余额
   const fetchBalance = async (walletAddress: string) => {
-    if (!tokenContractAddress || !walletAddress) return
+    if (!tokenContractAddress || !walletAddress || !window.ethereum) return
 
     try {
       // ERC20 balanceOf 函数的 ABI 编码
