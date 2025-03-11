@@ -96,15 +96,36 @@ export default function HeroSection({ user }: HeroSectionProps) {
             console.log('Found token ID:', tokenId.toString());
             
             let tokenURI;
+            let metadata = null;
             try {
               tokenURI = await nftContract.tokenURI(tokenId);
+              console.log('Token URI:', tokenURI);
+              
+              // 获取元数据
+              if (tokenURI) {
+                try {
+                  // 如果是 IPFS URI，转换为 HTTP URL
+                  const url = tokenURI.startsWith('ipfs://') 
+                    ? tokenURI.replace('ipfs://', 'https://ipfs.io/ipfs/') 
+                    : tokenURI;
+                  
+                  const response = await fetch(url);
+                  if (response.ok) {
+                    metadata = await response.json();
+                    console.log('NFT Metadata:', metadata);
+                  }
+                } catch (metadataError) {
+                  console.error('Error fetching metadata:', metadataError);
+                }
+              }
             } catch (uriError) {
               console.error('Error getting token URI:', uriError);
             }
             
             userNfts.push({
               tokenId: tokenId.toString(),
-              tokenURI
+              tokenURI,
+              metadata
             });
           } catch (error) {
             console.error('Error getting token ID:', error);
@@ -230,18 +251,62 @@ export default function HeroSection({ user }: HeroSectionProps) {
           <div className="space-y-4">
             {/* NFT 列表 */}
             {nfts.length > 0 ? (
-              <div className="space-y-2">
+              <div className="space-y-4">
                 <h3 className="text-sm font-medium">Your NFTs</h3>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-4">
                   {nfts.map((nft) => (
-                    <Button
+                    <div 
                       key={nft.tokenId}
-                      variant={selectedNft?.tokenId === nft.tokenId ? "default" : "outline"}
                       onClick={() => setSelectedNft(nft)}
-                      className="w-full"
+                      className={`border rounded-lg p-3 cursor-pointer transition-all ${
+                        selectedNft?.tokenId === nft.tokenId 
+                          ? 'border-blue-500 bg-blue-50' 
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
                     >
-                      Token #{nft.tokenId}
-                    </Button>
+                      {/* NFT 图像 */}
+                      {nft.metadata?.image ? (
+                        <div className="aspect-square w-full mb-2 overflow-hidden rounded-md">
+                          <img 
+                            src={nft.metadata.image.startsWith('ipfs://') 
+                              ? nft.metadata.image.replace('ipfs://', 'https://ipfs.io/ipfs/') 
+                              : nft.metadata.image
+                            } 
+                            alt={`NFT #${nft.tokenId}`}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = 'https://placehold.co/200x200?text=NFT';
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        <div className="aspect-square w-full mb-2 bg-gray-100 flex items-center justify-center rounded-md">
+                          <span className="text-gray-500">NFT #{nft.tokenId}</span>
+                        </div>
+                      )}
+                      
+                      {/* NFT 信息 */}
+                      <div className="space-y-1">
+                        <p className="font-medium text-sm truncate">
+                          {nft.metadata?.name || `NFT #${nft.tokenId}`}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Token ID: {nft.tokenId}
+                        </p>
+                        {nft.metadata?.attributes && nft.metadata.attributes.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {nft.metadata.attributes.slice(0, 2).map((attr: any, index: number) => (
+                              <span 
+                                key={index} 
+                                className="text-xs bg-gray-100 px-1.5 py-0.5 rounded"
+                              >
+                                {attr.trait_type}: {attr.value}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>

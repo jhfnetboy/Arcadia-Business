@@ -151,34 +151,60 @@ export function BlockchainWalletProvider({ children }: { children: React.ReactNo
         }
       };
 
-      window.ethereum.on('accountsChanged', handleAccountsChanged);
+      window.ethereum!.on('accountsChanged', handleAccountsChanged);
       return () => {
-        window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+        window.ethereum!.removeListener('accountsChanged', handleAccountsChanged);
       };
     }
   }, [currentNetwork]);
 
   // 监听 Aptos 账户变化
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.aptos) {
-      const handleAccountChange = (account: any) => {
-        if (!account) {
+    if (typeof window === 'undefined' || !window.aptos) return;
+    
+    let lastKnownAddress = aptosAddress;
+    
+    // 使用轮询检查 Aptos 钱包状态变化
+    const checkAptosWallet = async () => {
+      try {
+        // 检查钱包是否已连接
+        const isConnected = await window.aptos!.isConnected();
+        
+        if (isConnected) {
+          // 获取当前账户
+          const account = await window.aptos!.account();
+          
+          if (account && account.address !== lastKnownAddress) {
+            // 地址变化了
+            lastKnownAddress = account.address;
+            setAptosAddress(account.address);
+            console.log('Aptos address changed:', account.address);
+          }
+        } else if (lastKnownAddress) {
+          // 钱包断开连接
+          lastKnownAddress = null;
           setAptosAddress(null);
           setAptosBalance(null);
           if (currentNetwork === 'aptos') {
             setCurrentNetwork(null);
           }
-        } else if (currentNetwork === 'aptos') {
-          setAptosAddress(account.address);
+          console.log('Aptos wallet disconnected');
         }
-      };
-
-      window.aptos.onAccountChange(handleAccountChange);
-      return () => {
-        // Cleanup if needed
-      };
-    }
-  }, [currentNetwork]);
+      } catch (error) {
+        console.error('Error checking Aptos wallet:', error);
+      }
+    };
+    
+    // 立即检查一次
+    checkAptosWallet();
+    
+    // 设置轮询间隔
+    const intervalId = setInterval(checkAptosWallet, 2000);
+    
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [aptosAddress, currentNetwork]);
 
   const value = {
     ethereumAddress,
@@ -209,41 +235,42 @@ interface BlockchainWalletProps {
 }
 
 export default function BlockchainWallet({ className = '' }: BlockchainWalletProps) {
-  const { currentNetwork } = useBlockchainWallet();
+  const { currentNetwork, setCurrentNetwork } = useBlockchainWallet();
   
   return (
     <div className={`bg-white p-4 rounded-lg shadow-md ${className}`}>
-      <Tabs defaultValue={currentNetwork || 'ethereum'} onValueChange={(value) => {
-        if (value === 'ethereum') {
-          useBlockchainWallet().setCurrentNetwork('ethereum');
-        } else if (value === 'aptos') {
-          useBlockchainWallet().setCurrentNetwork('aptos');
-        }
-      }}>
+      <Tabs 
+        defaultValue={currentNetwork || 'ethereum'} 
+        onValueChange={(value) => {
+          if (value === 'ethereum' || value === 'aptos') {
+            setCurrentNetwork(value as NetworkType);
+          }
+        }}
+      >
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="ethereum">
             Ethereum
             {currentNetwork === 'ethereum' && (
-              <span className="ml-1 text-xs text-gray-500">({ETHEREUM_NETWORKS[currentNetwork]})</span>
+              <span className="ml-1 text-xs text-gray-500">(Ethereum)</span>
             )}
           </TabsTrigger>
           <TabsTrigger value="aptos">
             Aptos
             {currentNetwork === 'aptos' && (
-              <span className="ml-1 text-xs text-gray-500">({ETHEREUM_NETWORKS[currentNetwork]})</span>
+              <span className="ml-1 text-xs text-gray-500">(Aptos)</span>
             )}
           </TabsTrigger>
         </TabsList>
-        <TabsContent value="ethereum" className="mt-4">
+        <TabsContent value="ethereum">
           <MetamaskConnector 
-            tokenContractAddress={ETHEREUM_CONTRACTS.HERO_COIN_ADDRESS}
-            tokenSymbol={TOKEN_SYMBOLS.ETHEREUM}
+            tokenContractAddress={ETHEREUM_CONTRACTS.HERO_COIN_ADDRESS} 
+            tokenSymbol={TOKEN_SYMBOLS.ETHEREUM} 
           />
         </TabsContent>
-        <TabsContent value="aptos" className="mt-4">
+        <TabsContent value="aptos">
           <PetraConnector 
-            tokenAddress={APTOS_CONTRACTS.MOVE_HERO_COIN_ADDRESS}
-            tokenSymbol={TOKEN_SYMBOLS.APTOS}
+            tokenAddress={APTOS_CONTRACTS.MOVE_HERO_COIN_ADDRESS} 
+            tokenSymbol={TOKEN_SYMBOLS.APTOS} 
           />
         </TabsContent>
       </Tabs>
