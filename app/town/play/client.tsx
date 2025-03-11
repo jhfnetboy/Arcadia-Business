@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { Maximize2, Minimize2 } from 'lucide-react'
 import BlockchainWallet from '@/components/blockchain-wallet'
 import { useBlockchainWallet } from '@/components/blockchain-wallet'
+import { useHero } from '@/lib/hero-context'
 
 // 定义英雄数据类型
 interface Hero {
@@ -41,11 +42,52 @@ export default function PlayGameClient({ user }: PlayGameClientProps) {
   const [gameLoaded, setGameLoaded] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const gameContainerRef = useRef<HTMLDivElement>(null)
-  const { ethereumAddress, aptosAddress } = useBlockchainWallet();
+  const { ethereumAddress, aptosAddress } = useBlockchainWallet()
+  const { hero: contextHero } = useHero() // 从Context获取英雄信息
 
-  // 初始化默认英雄数据
+  // 初始化英雄数据
   useEffect(() => {
-    // 创建默认英雄
+    // 首先检查Context中是否有英雄数据
+    if (contextHero) {
+      console.log('Using hero from context:', contextHero)
+      // 转换为客户端Hero类型
+      const clientHero: Hero = {
+        name: contextHero.name,
+        points: contextHero.points,
+        level: contextHero.level,
+        userId: contextHero.userId,
+        createdAt: contextHero.createdAt,
+        txHash: contextHero.txHash
+      }
+      setHero(clientHero)
+      setHeroName(clientHero.name)
+      setIsLoading(false)
+      return
+    }
+    
+    // 如果Context中没有英雄数据，尝试从URL参数获取
+    const urlParams = new URLSearchParams(window.location.search)
+    const heroId = urlParams.get('heroId')
+    const heroName = urlParams.get('heroName')
+    const heroLevel = urlParams.get('heroLevel')
+    const heroPoints = urlParams.get('heroPoints')
+    
+    if (heroId && heroName) {
+      console.log('Using hero from URL params')
+      const urlHero: Hero = {
+        name: heroName,
+        level: heroLevel ? parseInt(heroLevel) : 1,
+        points: heroPoints ? parseInt(heroPoints) : 0,
+        userId: user.email || 'unknown',
+        createdAt: new Date().toISOString()
+      }
+      setHero(urlHero)
+      setHeroName(urlHero.name)
+      setIsLoading(false)
+      return
+    }
+    
+    // 如果没有英雄数据，创建默认英雄
     const defaultHero: Hero = {
       name: user.name || 'Adventurer',
       points: 0,
@@ -55,8 +97,9 @@ export default function PlayGameClient({ user }: PlayGameClientProps) {
     }
     
     setHero(defaultHero)
+    setHeroName(defaultHero.name)
     setIsLoading(false)
-  }, [user])
+  }, [user, contextHero])
 
   // 创建英雄
   const createHero = async () => {
