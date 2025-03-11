@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { useRouter } from 'next/navigation'
 
 interface User {
   name?: string | null
@@ -27,6 +28,7 @@ interface HeroSectionProps {
 }
 
 export default function HeroSection({ user }: HeroSectionProps) {
+  const router = useRouter()
   const [heroName, setHeroName] = useState('')
   const [hero, setHero] = useState<Hero | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -54,7 +56,7 @@ export default function HeroSection({ user }: HeroSectionProps) {
   }, [])
 
   // 创建英雄
-  const createHero = async () => {
+  const createHero = () => {
     if (!heroName.trim()) {
       toast.error('Please enter a hero name')
       return
@@ -63,7 +65,7 @@ export default function HeroSection({ user }: HeroSectionProps) {
     setIsCreating(true)
     
     try {
-      // 创建英雄数据
+      // 创建英雄数据（仅在本地状态中）
       const newHero: Hero = {
         name: heroName,
         points: 0,
@@ -72,23 +74,14 @@ export default function HeroSection({ user }: HeroSectionProps) {
         createdAt: new Date().toISOString()
       }
       
-      // 保存到服务器
-      const response = await fetch('/api/hero/save', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(newHero),
-      })
+      // 设置本地状态
+      setHero(newHero)
+      toast.success(`Hero ${heroName} created!`)
       
-      const result = await response.json()
-      
-      if (result.success) {
-        setHero(newHero)
-        toast.success(`Hero ${heroName} created!`)
-      } else {
-        toast.error('Failed to create hero')
-      }
+      // 直接导航到游戏页面
+      setTimeout(() => {
+        router.push('/town/play')
+      }, 500)
     } catch (error) {
       console.error('Error creating hero:', error)
       toast.error('Error creating hero')

@@ -38,29 +38,20 @@ export default function PlayGameClient({ user }: PlayGameClientProps) {
   const [txHash, setTxHash] = useState<string | null>(null)
   const [gameLoaded, setGameLoaded] = useState(false)
 
-  // 加载英雄数据
+  // 初始化默认英雄数据
   useEffect(() => {
-    const fetchHero = async () => {
-      try {
-        const response = await fetch('/api/hero/get')
-        const data = await response.json()
-        
-        if (data.success && data.hero) {
-          setHero(data.hero)
-          if (data.hero.txHash) {
-            setTxHash(data.hero.txHash)
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching hero:', error)
-        toast.error('Failed to load hero data')
-      } finally {
-        setIsLoading(false)
-      }
+    // 创建默认英雄
+    const defaultHero: Hero = {
+      name: user.name || 'Adventurer',
+      points: 0,
+      level: 1,
+      userId: user.email || 'unknown',
+      createdAt: new Date().toISOString()
     }
-
-    fetchHero()
-  }, [])
+    
+    setHero(defaultHero)
+    setIsLoading(false)
+  }, [user])
 
   // 创建英雄
   const createHero = async () => {
@@ -81,23 +72,9 @@ export default function PlayGameClient({ user }: PlayGameClientProps) {
         createdAt: new Date().toISOString()
       }
       
-      // 保存到服务器
-      const response = await fetch('/api/hero/save', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(newHero),
-      })
-      
-      const result = await response.json()
-      
-      if (result.success) {
-        setHero(result.hero)
-        toast.success(`Hero ${heroName} created!`)
-      } else {
-        toast.error('Failed to create hero')
-      }
+      // 设置英雄数据（仅本地状态）
+      setHero(newHero)
+      toast.success(`Hero ${heroName} created!`)
     } catch (error) {
       console.error('Error creating hero:', error)
       toast.error('Error creating hero')
@@ -163,29 +140,9 @@ export default function PlayGameClient({ user }: PlayGameClientProps) {
         if (data && data.type === 'SAVE_HERO') {
           console.log('Received save request from game:', data.payload)
           
-          try {
-            // 调用 API 保存英雄数据
-            const response = await fetch('/api/hero/save', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(data.payload),
-            })
-            
-            const result = await response.json()
-            
-            if (result.success) {
-              toast.success('Hero data saved successfully!')
-              // 更新本地英雄数据
-              setHero(result.hero)
-            } else {
-              toast.error('Failed to save hero data')
-            }
-          } catch (error) {
-            console.error('Error saving hero data:', error)
-            toast.error('Error saving hero data')
-          }
+          // 更新本地英雄数据（不调用API）
+          setHero(data.payload as Hero)
+          toast.success('Hero data saved locally!')
         }
         
         // 处理英雄数据接收确认消息
@@ -218,17 +175,6 @@ export default function PlayGameClient({ user }: PlayGameClientProps) {
       }
       
       setHero(updatedHero)
-      
-      // 保存到服务器
-      fetch('/api/hero/save', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updatedHero),
-      }).catch(error => {
-        console.error('Error saving txHash:', error)
-      })
     }
   }
 
@@ -339,4 +285,4 @@ export default function PlayGameClient({ user }: PlayGameClientProps) {
       )}
     </>
   )
-} 
+}

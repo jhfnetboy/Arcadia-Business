@@ -29,7 +29,7 @@ export default function BlockchainConnector({ heroData, onSaveComplete }: Blockc
   const connectWallet = async () => {
     try {
       // 检查是否有MetaMask
-      if (typeof window.ethereum !== 'undefined') {
+      if (typeof window !== 'undefined' && typeof window.ethereum !== 'undefined') {
         setIsSaving(true)
         
         // 请求账户访问
