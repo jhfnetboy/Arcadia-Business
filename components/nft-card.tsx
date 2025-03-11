@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React from 'react'
 
 interface NFT {
   tokenId: string
@@ -17,14 +17,19 @@ interface NFTCardProps {
   currentNetwork?: string
 }
 
-export default function NFTCard({ 
+const NFTCard: React.FC<NFTCardProps> = ({ 
   nfts, 
   onSelectNft, 
   selectedNftId, 
   ethereumAddress, 
   isLoading, 
   currentNetwork 
-}: NFTCardProps) {
+}) => {
+  const handleClick = (nft: NFT) => {
+    console.log('NFT card clicked:', nft.tokenId);
+    onSelectNft(nft);
+  };
+
   return (
     <div>
       <h3 className="text-sm font-medium mb-3">Your NFTs</h3>
@@ -51,7 +56,7 @@ export default function NFTCard({
             {nfts.map((nft) => (
               <div 
                 key={nft.tokenId}
-                onClick={() => onSelectNft(nft)}
+                onClick={() => handleClick(nft)}
                 className={`border rounded-lg p-2 cursor-pointer transition-all ${
                   selectedNftId === nft.tokenId 
                     ? 'border-blue-500 bg-blue-50' 
@@ -111,4 +116,6 @@ export default function NFTCard({
       )}
     </div>
   )
-} 
+}
+
+export default NFTCard 

@@ -63,6 +63,35 @@ export function BlockchainWalletProvider({ children }: { children: React.ReactNo
   const [currentNetwork, setCurrentNetwork] = useState<NetworkType>(null)
   const [isConnecting, setIsConnecting] = useState(false)
 
+  // 触发钱包连接事件
+  const triggerWalletEvent = (type: string, address: string | null, network: NetworkType) => {
+    try {
+      const event = new CustomEvent('walletEvent', {
+        detail: { type, address, network },
+        bubbles: true,
+        cancelable: true
+      });
+      document.dispatchEvent(event);
+      console.log(`Dispatched wallet event: ${type} for ${network} address ${address}`);
+    } catch (error) {
+      console.error('Error dispatching wallet event:', error);
+    }
+  };
+
+  // 当以太坊地址变化时触发事件
+  useEffect(() => {
+    if (ethereumAddress) {
+      triggerWalletEvent('connect', ethereumAddress, 'ethereum');
+    }
+  }, [ethereumAddress]);
+
+  // 当Aptos地址变化时触发事件
+  useEffect(() => {
+    if (aptosAddress) {
+      triggerWalletEvent('connect', aptosAddress, 'aptos');
+    }
+  }, [aptosAddress]);
+
   // 连接以太坊钱包
   const connectEthereum = async () => {
     if (typeof window === 'undefined' || !window.ethereum) {
@@ -89,6 +118,9 @@ export function BlockchainWalletProvider({ children }: { children: React.ReactNo
         // 获取网络信息
         const network = await provider.getNetwork();
         console.log('Connected to network:', network.name, 'Chain ID:', network.chainId);
+        
+        // 触发连接事件
+        triggerWalletEvent('connect', accounts[0], 'ethereum');
         
         // 查询 NFT 合约
         try {
@@ -139,104 +171,111 @@ export function BlockchainWalletProvider({ children }: { children: React.ReactNo
   // 连接 Aptos 钱包
   const connectAptos = async () => {
     if (typeof window === 'undefined') {
-      toast.error('Browser environment not available');
+      console.error('Browser environment not available');
       return;
     }
-
+    
     try {
       setIsConnecting(true);
-      console.log('Attempting to connect to Aptos wallet');
+      console.log('Attempting to connect to Aptos wallet...');
       
-      // 检查 window.aptos
+      // 检查是否有 window.aptos
       if (!window.aptos) {
-        console.log('window.aptos not found, checking for aptosWallets');
+        console.log('window.aptos not found, checking window.aptosWallets');
         
-        // 检查 window.aptosWallets
-        if (window.aptosWallets && window.aptosWallets.length > 0) {
-          console.log('Found aptosWallets:', window.aptosWallets.map(w => w.name).join(', '));
-          
-          // 查找 Petra 钱包
-          const petraWallet = window.aptosWallets.find(wallet => wallet.name === 'Petra');
-          
-          if (petraWallet) {
-            console.log('Found Petra wallet in aptosWallets');
+        // 检查是否有 window.aptosWallets
+        if (!window.aptosWallets) {
+          const errorMsg = 'Petra wallet not installed';
+          console.error(errorMsg);
+          toast.error(errorMsg);
+          window.open('https://petra.app/', '_blank');
+          setIsConnecting(false);
+          return;
+        }
+        
+        // 查找 Petra 钱包
+        const petra = window.aptosWallets.find((wallet: any) => wallet.name === 'Petra');
+        if (!petra) {
+          const errorMsg = 'Petra wallet not found';
+          console.error(errorMsg);
+          toast.error(errorMsg);
+          window.open('https://petra.app/', '_blank');
+          setIsConnecting(false);
+          return;
+        }
+        
+        // 连接 Petra 钱包
+        try {
+          await petra.connect();
+          const account = await petra.account();
+          if (account && account.address) {
+            setAptosAddress(account.address);
+            setCurrentNetwork('aptos');
             
-            try {
-              // 连接钱包
-              const response = await petraWallet.connect();
-              console.log('Petra wallet connected:', response);
-              
-              if (response && response.address) {
-                setAptosAddress(response.address);
-                setCurrentNetwork('aptos');
-                
-                // 获取网络信息
-                try {
-                  const network = await petraWallet.network();
-                  console.log('Connected to Aptos network:', network);
-                } catch (networkError) {
-                  console.error('Error getting Aptos network:', networkError);
-                }
-                
-                toast.success('Petra wallet connected successfully!');
-                return;
-              } else {
-                console.error('No address in Petra wallet response');
-                toast.error('Failed to get address from Petra wallet');
-              }
-            } catch (connectError) {
-              console.error('Error connecting to Petra wallet:', connectError);
-              toast.error('Failed to connect to Petra wallet');
-              throw connectError;
-            }
-          } else {
-            console.log('Petra wallet not found in aptosWallets');
-          }
-        } else {
-          console.log('No aptosWallets found');
-        }
-        
-        toast.error('Petra wallet not installed');
-        window.open('https://petra.app/', '_blank');
-        return;
-      }
-      
-      console.log('Using window.aptos to connect');
-      
-      // 使用 window.aptos 连接
-      try {
-        const response = await window.aptos.connect();
-        console.log('Aptos wallet connected:', response);
-        
-        if (response && response.address) {
-          setAptosAddress(response.address);
-          setCurrentNetwork('aptos');
-          
-          // 获取网络信息
-          try {
-            const network = await window.aptos.network();
+            // 触发连接事件
+            triggerWalletEvent('connect', account.address, 'aptos');
+            
+            // 获取余额
+            const provider = new ethers.providers.Web3Provider(window.aptos as any);
+            const balance = await provider.getBalance(account.address);
+            const aptosBalance = ethers.utils.formatEther(balance);
+            setAptosBalance(parseFloat(aptosBalance).toFixed(4));
+            
+            // 获取网络信息
+            const network = await provider.getNetwork();
             console.log('Connected to Aptos network:', network);
-          } catch (networkError) {
-            console.error('Error getting Aptos network:', networkError);
+            
+            toast.success('Petra wallet connected successfully!');
+          } else {
+            console.error('No address in Petra wallet response');
+            toast.error('Failed to get address from Petra wallet');
           }
-          
-          // 获取账户信息
-          try {
-            const account = await window.aptos.account();
-            console.log('Aptos account info:', account);
-          } catch (accountError) {
-            console.error('Error getting Aptos account:', accountError);
-          }
-          
-          toast.success('Petra wallet connected successfully!');
-        } else {
-          console.error('No address in Aptos wallet response');
-          toast.error('Failed to get address from Aptos wallet');
+        } catch (connectError) {
+          console.error('Error connecting to Petra wallet:', connectError);
+          toast.error('Failed to connect to Petra wallet');
+          throw connectError;
         }
-      } catch (error) {
-        console.error('Error connecting to Aptos wallet:', error);
-        toast.error('Failed to connect to Aptos wallet');
-        throw error;
+      } else {
+        console.log('Using window.aptos to connect');
+        
+        // 使用 window.aptos 连接
+        try {
+          const response = await window.aptos.connect();
+          console.log('Aptos wallet connected:', response);
+          
+          if (response && response.address) {
+            setAptosAddress(response.address);
+            setCurrentNetwork('aptos');
+            
+            // 获取网络信息
+            try {
+              const network = await window.aptos.network();
+              console.log('Connected to Aptos network:', network);
+            } catch (networkError) {
+              console.error('Error getting Aptos network:', networkError);
+            }
+            
+            // 获取账户信息
+            try {
+              const account = await window.aptos.account();
+              console.log('Aptos account info:', account);
+            } catch (accountError) {
+              console.error('Error getting Aptos account:', accountError);
+            }
+            
+            // 触发连接事件
+            triggerWalletEvent('connect', response.address, 'aptos');
+            
+            toast.success('Petra wallet connected successfully!');
+          } else {
+            console.error('No address in Aptos wallet response');
+            toast.error('Failed to get address from Aptos wallet');
+          }
+        } catch (error) {
+          console.error('Error connecting to Aptos wallet:', error);
+          toast.error('Failed to connect to Aptos wallet');
+          throw error;
+        }
       }
     } catch (error) {
       console.error('Error in connectAptos:', error);

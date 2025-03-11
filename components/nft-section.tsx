@@ -6,6 +6,7 @@ import { useBlockchainWallet } from './blockchain-wallet'
 import { ETHEREUM_CONTRACTS } from '@/lib/constants'
 import { ethers } from 'ethers'
 import NFTCard from './nft-card'
+import { useRouter } from 'next/navigation'
 
 // ERC721 ABI with Transfer event
 const ERC721_ABI = [
@@ -22,17 +23,47 @@ interface NFT {
   metadata?: any
 }
 
+// 创建一个全局事件总线，用于组件间通信
+export const selectNFTEvent = new CustomEvent('selectNFT', { detail: null });
+
 export default function NFTSection() {
   const [nfts, setNfts] = useState<NFT[]>([])
   const [selectedNft, setSelectedNft] = useState<NFT | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [debugInfo, setDebugInfo] = useState<string[]>([])
   const { ethereumAddress, currentNetwork } = useBlockchainWallet()
+  const router = useRouter()
 
   // 添加调试信息
   const addDebugInfo = (info: string) => {
     console.log(info);
     setDebugInfo(prev => [...prev, `${new Date().toLocaleTimeString()}: ${info}`]);
+  };
+
+  // 处理NFT选择
+  const handleSelectNft = (nft: NFT) => {
+    setSelectedNft(nft);
+    addDebugInfo(`Selected NFT: ${nft.tokenId}`);
+    
+    // 触发自定义事件，通知其他组件
+    try {
+      // 创建带有NFT数据的事件
+      const event = new CustomEvent('selectNFT', { 
+        detail: { nft },
+        bubbles: true,
+        cancelable: true
+      });
+      
+      // 分发事件
+      document.dispatchEvent(event);
+      addDebugInfo(`Dispatched selectNFT event for token ID: ${nft.tokenId}`);
+      
+      // 更新URL以包含选定的NFT
+      // router.push(`/town?nft=${nft.tokenId}`);
+    } catch (error) {
+      console.error('Error dispatching selectNFT event:', error);
+      addDebugInfo(`Error dispatching event: ${error instanceof Error ? error.message : String(error)}`);
+    }
   };
 
   // 加载用户的 NFT
@@ -216,12 +247,12 @@ export default function NFTSection() {
               }
             } catch (eventsError) {
               console.error('Error getting Transfer events:', eventsError);
-              addDebugInfo(`Error getting Transfer events: ${eventsError instanceof Error ? eventsError.message : String(eventsError)}`);
+              addDebugInfo(`Error getting Transfer events: ${JSON.stringify(eventsError) || 'Unknown error'}`);
               
               // 方法 3: 如果前两种方法都失败，创建一些模拟的 NFT 数据用于测试
               if (tokenIds.size === 0) {
                 addDebugInfo('Using fallback method to create sample NFTs');
-                for (let i = 0; i < Math.min(balanceNumber, 5); i++) {
+                for (let i = 0; i < Math.min(balanceNumber || 3, 5); i++) {
                   const tokenId = `${i}`;
                   nftPromises.push(Promise.resolve({
                     tokenId,
@@ -273,12 +304,6 @@ export default function NFTSection() {
     loadNFTs();
   }, [ethereumAddress, currentNetwork]);
 
-  // 处理选择 NFT
-  const handleSelectNft = (nft: NFT) => {
-    setSelectedNft(nft);
-    // 这里可以添加其他处理逻辑，例如通知父组件
-  };
-
   return (
     <Card className="h-full">
       <CardHeader>
@@ -290,14 +315,14 @@ export default function NFTSection() {
           nfts={nfts}
           onSelectNft={handleSelectNft}
           selectedNftId={selectedNft?.tokenId}
-          ethereumAddress={ethereumAddress || undefined}
+          ethereumAddress={ethereumAddress || ''}
           isLoading={isLoading}
-          currentNetwork={currentNetwork || undefined}
+          currentNetwork={currentNetwork || ''}
         />
         
         {/* 调试信息 */}
         {debugInfo.length > 0 && (
-          <div className="p-3 mt-4 bg-gray-50 border border-gray-200 rounded-md text-xs text-gray-700 max-h-40 overflow-y-auto">
+          <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-md text-xs text-gray-700 max-h-40 overflow-y-auto">
             <p className="font-medium mb-1">Debug Info:</p>
             {debugInfo.map((info, index) => (
               <p key={index} className="mb-1">{info}</p>
@@ -305,6 +330,15 @@ export default function NFTSection() {
           </div>
         )}
       </CardContent>
+      <CardFooter>
+        <div className="w-full text-center text-xs text-gray-500">
+          {selectedNft ? (
+            <p>Selected NFT: #{selectedNft.tokenId}</p>
+          ) : (
+            <p>Click on an NFT to select it</p>
+          )}
+        </div>
+      </CardFooter>
     </Card>
   )
 } 

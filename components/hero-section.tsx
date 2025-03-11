@@ -70,6 +70,56 @@ export default function HeroSection({ user }: HeroSectionProps) {
     setDebugInfo(prev => [...prev, `${new Date().toLocaleTimeString()}: ${info}`]);
   };
 
+  // 监听钱包连接事件
+  useEffect(() => {
+    const handleWalletEvent = (event: any) => {
+      if (event.detail && event.detail.type === 'connect') {
+        const { address, network } = event.detail;
+        addDebugInfo(`Received wallet event: ${network} wallet connected with address ${address}`);
+        
+        // 如果是以太坊钱包连接，重置状态
+        if (network === 'ethereum') {
+          setHero(null);
+          setContractError(null);
+          setHeroNotFound(false);
+          setSelectedNft(null);
+        }
+      }
+    };
+    
+    // 添加事件监听器
+    document.addEventListener('walletEvent', handleWalletEvent);
+    
+    // 清理函数
+    return () => {
+      document.removeEventListener('walletEvent', handleWalletEvent);
+    };
+  }, []);
+
+  // 监听NFT选择事件
+  useEffect(() => {
+    const handleNftSelect = (event: any) => {
+      if (event.detail && event.detail.nft) {
+        const nft = event.detail.nft;
+        addDebugInfo(`Received selectNFT event for token ID: ${nft.tokenId}`);
+        setSelectedNft(nft);
+        
+        // 重置状态
+        setHero(null);
+        setContractError(null);
+        setHeroNotFound(false);
+      }
+    };
+    
+    // 添加事件监听器
+    document.addEventListener('selectNFT', handleNftSelect);
+    
+    // 清理函数
+    return () => {
+      document.removeEventListener('selectNFT', handleNftSelect);
+    };
+  }, []);
+
   // 加载用户的 NFT
   useEffect(() => {
     const loadNFTs = async () => {
@@ -251,12 +301,12 @@ export default function HeroSection({ user }: HeroSectionProps) {
               }
             } catch (eventsError) {
               console.error('Error getting Transfer events:', eventsError);
-              addDebugInfo(`Error getting Transfer events: ${eventsError instanceof Error ? eventsError.message : String(eventsError)}`);
+              addDebugInfo(`Error getting Transfer events: ${JSON.stringify(eventsError) || 'Unknown error'}`);
               
               // 方法 3: 如果前两种方法都失败，创建一些模拟的 NFT 数据用于测试
               if (tokenIds.size === 0) {
                 addDebugInfo('Using fallback method to create sample NFTs');
-                for (let i = 0; i < Math.min(balanceNumber, 5); i++) {
+                for (let i = 0; i < Math.min(balanceNumber || 3, 5); i++) {
                   const tokenId = `${i}`;
                   nftPromises.push(Promise.resolve({
                     tokenId,
@@ -381,43 +431,23 @@ export default function HeroSection({ user }: HeroSectionProps) {
             
             if (!hasGetHeroInfo) {
               addDebugInfo('getHeroInfo method not found in contract ABI, trying alternative method');
-              
-              // 尝试使用 heroExists 方法
-              try {
-                const exists = await heroContract.heroExists(
-                  ETHEREUM_CONTRACTS.HERO_NFT_ADDRESS,
-                  selectedNft.tokenId
-                );
-                
-                if (exists) {
-                  // 如果英雄存在，创建一个基本的英雄对象
-                  const newHero: Hero = {
-                    name: `Hero #${selectedNft.tokenId}`,
-                    points: 0,
-                    level: 1,
-                    userId: user.email || 'unknown',
-                    createdAt: new Date().toISOString(),
-                    tokenId: selectedNft.tokenId
-                  };
-                  
-                  setHero(newHero);
-                  setHeroNotFound(false);
-                } else {
-                  setContractError('Hero not found in contract');
-                  setHeroNotFound(true);
-                }
-              } catch (error) {
-                console.error('Error checking if hero exists:', error);
-                addDebugInfo(`Error checking if hero exists: ${error instanceof Error ? error.message : String(error)}`);
-                setContractError(`Error checking if hero exists: ${error instanceof Error ? error.message : String(error)}`);
-                setHeroNotFound(true);
-              }
+              setHeroNotFound(true);
+              setContractError('getHeroInfo method not found in contract ABI');
             } else {
               // 使用 getHeroInfo 方法
               try {
+                // 添加更多日志
+                addDebugInfo(`Calling getHeroInfo with NFT contract: ${ETHEREUM_CONTRACTS.HERO_NFT_ADDRESS}`);
+                addDebugInfo(`Token ID: ${selectedNft.tokenId} (type: ${typeof selectedNft.tokenId})`);
+                
+                // 确保tokenId是数字
+                const tokenIdNumber = parseInt(selectedNft.tokenId, 10);
+                addDebugInfo(`Parsed token ID: ${tokenIdNumber}`);
+                
+                // 调用合约方法
                 const heroInfo = await heroContract.getHeroInfo(
                   ETHEREUM_CONTRACTS.HERO_NFT_ADDRESS,
-                  selectedNft.tokenId
+                  tokenIdNumber
                 );
                 
                 addDebugInfo(`Hero info retrieved: ${JSON.stringify(heroInfo)}`);
@@ -436,47 +466,35 @@ export default function HeroSection({ user }: HeroSectionProps) {
                 setHeroNotFound(false);
               } catch (contractError) {
                 console.error('Error getting hero from contract:', contractError);
-                addDebugInfo(`Error getting hero from contract: ${contractError instanceof Error ? contractError.message : String(contractError)}`);
+                addDebugInfo(`Error getting hero from contract: ${contractError instanceof Error ? contractError.message : JSON.stringify(contractError)}`);
                 
-                // 尝试解析错误数据
-                if (contractError instanceof Error) {
-                  const errorData = (contractError as any).data;
-                  if (errorData) {
-                    addDebugInfo(`Error data: ${errorData}`);
-                    
-                    // 尝试解析返回的数据
-                    try {
-                      // 如果数据以 0x 开头，可能是十六进制编码的数据
-                      if (typeof errorData === 'string' && errorData.startsWith('0x')) {
-                        // 尝试解码数据
-                        const decodedData = ethers.utils.toUtf8String(errorData);
-                        addDebugInfo(`Decoded error data: ${decodedData}`);
-                      }
-                    } catch (decodeError) {
-                      addDebugInfo(`Failed to decode error data: ${decodeError instanceof Error ? decodeError.message : String(decodeError)}`);
-                    }
-                  }
+                // 检查错误是否表示英雄不存在
+                const errorMessage = contractError instanceof Error ? contractError.message : String(contractError);
+                if (errorMessage.includes('revert') || errorMessage.includes('not found') || errorMessage.includes('not exist')) {
+                  addDebugInfo('Hero not found in contract, allowing creation');
+                  setHeroNotFound(true);
+                  setContractError(`Hero not found for NFT #${selectedNft.tokenId}`);
+                } else {
+                  setContractError(`Error calling getHeroInfo: ${errorMessage}`);
+                  setHeroNotFound(true);
                 }
-                
-                setContractError(`Hero not found in contract: ${contractError instanceof Error ? contractError.message : String(contractError)}`);
-                setHeroNotFound(true);
               }
             }
           } catch (error) {
             console.error('Error calling getHeroInfo:', error);
-            addDebugInfo(`Error calling getHeroInfo: ${error instanceof Error ? error.message : String(error)}`);
+            addDebugInfo(`Error calling getHeroInfo: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
             setContractError(`Error calling getHeroInfo: ${error instanceof Error ? error.message : String(error)}`);
             setHeroNotFound(true);
           }
         } catch (error) {
           console.error('Error initializing hero contract:', error);
-          addDebugInfo(`Error initializing hero contract: ${error instanceof Error ? error.message : String(error)}`);
+          addDebugInfo(`Error initializing hero contract: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
           setContractError(`Error initializing hero contract: ${error instanceof Error ? error.message : String(error)}`);
           setHeroNotFound(true);
         }
       } catch (error) {
         console.error('Error loading hero info:', error);
-        addDebugInfo(`Error loading hero info: ${error instanceof Error ? error.message : String(error)}`);
+        addDebugInfo(`Error loading hero info: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
         setContractError(`Error loading hero info: ${error instanceof Error ? error.message : String(error)}`);
         setHeroNotFound(true);
       } finally {
