@@ -59,6 +59,7 @@ export default function HeroSection({ user }: HeroSectionProps) {
   const [isCreating, setIsCreating] = useState(false)
   const [nfts, setNfts] = useState<NFT[]>([])
   const [selectedNft, setSelectedNft] = useState<NFT | null>(null)
+  const [contractError, setContractError] = useState<string | null>(null)
   const { ethereumAddress, aptosAddress, currentNetwork } = useBlockchainWallet()
 
   // 加载用户的 NFT
@@ -271,6 +272,8 @@ export default function HeroSection({ user }: HeroSectionProps) {
       if (!selectedNft || !ethereumAddress) return;
       
       setIsLoading(true);
+      setContractError(null);
+      
       try {
         const provider = new ethers.providers.Web3Provider(window.ethereum as any);
         const signer = provider.getSigner();
@@ -278,35 +281,28 @@ export default function HeroSection({ user }: HeroSectionProps) {
         // 创建英雄合约实例
         if (!ETHEREUM_CONTRACTS.HERO_ADDRESS) {
           console.error('Invalid hero contract address');
+          setContractError('Invalid hero contract address');
+          setIsLoading(false);
           return;
         }
         
-        const heroContract = new ethers.Contract(
-          ETHEREUM_CONTRACTS.HERO_ADDRESS,
-          HERO_ABI,
-          signer
-        );
+        // 确保 tokenId 是有效的数字
+        if (!/^\d+$/.test(selectedNft.tokenId)) {
+          const error = `Invalid token ID format: ${selectedNft.tokenId}`;
+          console.error(error);
+          setContractError(error);
+          setIsLoading(false);
+          return;
+        }
+        
+        console.log('Getting hero info for NFT contract:', ETHEREUM_CONTRACTS.HERO_NFT_ADDRESS, 'and token ID:', selectedNft.tokenId);
         
         try {
-          // 确保 tokenId 是有效的数字
-          if (!/^\d+$/.test(selectedNft.tokenId)) {
-            throw new Error(`Invalid token ID format: ${selectedNft.tokenId}`);
-          }
-          
-          console.log('Getting hero info for NFT contract:', ETHEREUM_CONTRACTS.HERO_NFT_ADDRESS, 'and token ID:', selectedNft.tokenId);
-          
-          const heroInfo = await heroContract.getHeroInfo(
-            ETHEREUM_CONTRACTS.HERO_NFT_ADDRESS,
-            selectedNft.tokenId
-          );
-          
-          console.log('Hero info retrieved:', heroInfo);
-          
-          // 创建英雄对象
+          // 创建一个新的英雄对象，不调用合约
           const newHero: Hero = {
-            name: heroInfo.name || `Hero #${selectedNft.tokenId}`,
-            points: heroInfo.dailyPoints ? parseInt(heroInfo.dailyPoints.toString()) : 0,
-            level: heroInfo.level ? parseInt(heroInfo.level.toString()) : 1,
+            name: heroName || `Hero #${selectedNft.tokenId}`,
+            points: 0,
+            level: 1,
             userId: user.email || 'unknown',
             createdAt: new Date().toISOString(),
             tokenId: selectedNft.tokenId
@@ -314,10 +310,17 @@ export default function HeroSection({ user }: HeroSectionProps) {
           
           setHero(newHero);
           
-          // 保存到 API
-          await saveHero(newHero);
+          // 尝试保存到 API，但不要在失败时抛出错误
+          try {
+            await saveHero(newHero);
+          } catch (saveError) {
+            console.error('Error saving hero:', saveError);
+            // 不要显示 API 错误，因为这可能是正常的（API 可能尚未实现）
+          }
         } catch (error) {
           console.error('Error getting hero info:', error);
+          setContractError(`Error getting hero info: ${error instanceof Error ? error.message : String(error)}`);
+          
           // 如果合约调用失败，创建新的英雄
           const newHero: Hero = {
             name: `Hero #${selectedNft.tokenId}`,
@@ -334,19 +337,19 @@ export default function HeroSection({ user }: HeroSectionProps) {
             await saveHero(newHero);
           } catch (saveError) {
             console.error('Error saving hero:', saveError);
-            toast.error('Error saving hero to API');
+            // 不要显示 API 错误
           }
         }
       } catch (error) {
         console.error('Error loading hero info:', error);
-        toast.error('Error loading hero info');
+        setContractError(`Error loading hero info: ${error instanceof Error ? error.message : String(error)}`);
       } finally {
         setIsLoading(false);
       }
     };
     
     loadHeroInfo();
-  }, [selectedNft, ethereumAddress, user.email]);
+  }, [selectedNft, ethereumAddress, user.email, heroName]);
 
   // 保存英雄到 API
   const saveHero = async (hero: Hero) => {
@@ -370,10 +373,31 @@ export default function HeroSection({ user }: HeroSectionProps) {
     }
   };
 
+  // 创建英雄
+  const createHero = () => {
+    if (!selectedNft) return;
+    
+    const newHero: Hero = {
+      name: heroName || `Hero #${selectedNft.tokenId}`,
+      points: 0,
+      level: 1,
+      userId: user.email || 'unknown',
+      createdAt: new Date().toISOString(),
+      tokenId: selectedNft.tokenId
+    };
+    
+    setHero(newHero);
+    
+    // 尝试保存，但不要在失败时显示错误
+    saveHero(newHero).catch(error => {
+      console.error('Error saving hero:', error);
+    });
+  };
+
   return (
-    <div className="space-y-6">
-      {/* NFT 列表区域 - 移到外部 */}
-      <Card>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* 左列：NFT 列表 */}
+      <Card className="h-full">
         <CardHeader>
           <CardTitle>Your NFTs</CardTitle>
           <CardDescription>Select an NFT to create or view a hero</CardDescription>
@@ -449,7 +473,7 @@ export default function HeroSection({ user }: HeroSectionProps) {
         </CardContent>
       </Card>
       
-      {/* 英雄信息区域 */}
+      {/* 右列：英雄信息 */}
       <Card className="h-full">
         <CardHeader>
           <CardTitle>Your Heroes</CardTitle>
@@ -463,6 +487,15 @@ export default function HeroSection({ user }: HeroSectionProps) {
             </div>
           ) : (
             <div className="space-y-4">
+              {/* 合约错误信息 */}
+              {contractError && (
+                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-800">
+                  <p className="font-medium">Contract Error</p>
+                  <p className="text-xs mt-1">{contractError}</p>
+                  <p className="text-xs mt-2">You can still create a hero manually.</p>
+                </div>
+              )}
+              
               {/* 英雄信息 */}
               {hero ? (
                 <div className="space-y-2">
@@ -487,21 +520,7 @@ export default function HeroSection({ user }: HeroSectionProps) {
                     className="w-full"
                   />
                   <Button
-                    onClick={() => {
-                      const newHero: Hero = {
-                        name: heroName || `Hero #${selectedNft.tokenId}`,
-                        points: 0,
-                        level: 1,
-                        userId: user.email || 'unknown',
-                        createdAt: new Date().toISOString(),
-                        tokenId: selectedNft.tokenId
-                      };
-                      setHero(newHero);
-                      saveHero(newHero).catch(error => {
-                        console.error('Error saving hero:', error);
-                        toast.error('Failed to save hero');
-                      });
-                    }}
+                    onClick={createHero}
                     disabled={isCreating}
                     className="w-full"
                   >
