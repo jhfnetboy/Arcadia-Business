@@ -329,16 +329,6 @@ export default function NFTSection() {
           isLoading={isLoading}
           currentNetwork={currentNetwork || ''}
         />
-        
-        {/* 调试信息 */}
-        {debugInfo.length > 0 && (
-          <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-md text-xs text-gray-700 max-h-40 overflow-y-auto">
-            <p className="font-medium mb-1">Debug Info:</p>
-            {debugInfo.map((info, index) => (
-              <p key={index} className="mb-1">{info}</p>
-            ))}
-          </div>
-        )}
       </CardContent>
       <CardFooter>
         <div className="w-full text-center text-xs text-gray-500">
