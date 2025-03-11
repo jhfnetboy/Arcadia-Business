@@ -2,7 +2,7 @@ import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import Image from "next/image"
+import { UserAvatar } from "@/components/auth-components"
 
 export default async function TownPage() {
   const session = await auth()
@@ -30,17 +30,9 @@ export default async function TownPage() {
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-blue-900 to-black">
       <div className="bg-black/50 p-8 rounded-lg backdrop-blur-sm">
         <div className="flex items-center mb-6">
-          {session.user.image && (
-            <div className="mr-4">
-              <Image 
-                src={session.user.image} 
-                alt="Profile" 
-                width={50} 
-                height={50} 
-                className="rounded-full"
-              />
-            </div>
-          )}
+          <div className="mr-4">
+            <UserAvatar user={session.user} />
+          </div>
           <div>
             <h1 className="text-3xl font-bold text-white">Welcome to Town</h1>
             <p className="text-white">Hello, {session.user.name || session.user.email}</p>

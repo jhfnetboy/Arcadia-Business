@@ -40,6 +40,18 @@
         #save-button:hover {
             background-color: #45a049;
         }
+        #status-indicator {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            z-index: 1000;
+        }
     </style>
 </head>
 <body>
@@ -51,6 +63,8 @@
         </div>
         <button id="save-button">Save Game</button>
     </div>
+    
+    <div id="status-indicator">Status: Initializing...</div>
     
     <iframe id="game-frame" src="index.html"></iframe>
     
@@ -70,6 +84,7 @@
         const heroPoints = document.getElementById('hero-points');
         const heroLevel = document.getElementById('hero-level');
         const saveButton = document.getElementById('save-button');
+        const statusIndicator = document.getElementById('status-indicator');
         
         // 更新 UI
         function updateUI() {
@@ -78,61 +93,114 @@
             heroLevel.textContent = heroData.level;
         }
         
+        // 更新状态指示器
+        function updateStatus(message) {
+            statusIndicator.textContent = `Status: ${message}`;
+            console.log(`Status: ${message}`);
+        }
+        
         // 初始化 UI
         updateUI();
+        updateStatus('Waiting for game to load...');
+        
+        // 监听游戏 iframe 加载完成
+        gameFrame.addEventListener('load', function() {
+            updateStatus('Game loaded');
+            
+            // 通知父窗口游戏已加载
+            try {
+                window.parent.postMessage({
+                    type: 'GAME_LOADED',
+                    payload: { success: true }
+                }, '*');
+            } catch (error) {
+                console.error('Error notifying parent window:', error);
+                updateStatus('Error connecting to parent window');
+            }
+        });
         
         // 监听来自父窗口的消息
-        window.addEventListener('message', (event) => {
-            // 验证消息类型
-            if (event.data && event.data.type === 'HERO_DATA') {
-                // 更新英雄数据
-                heroData = event.data.payload;
-                console.log('Bridge received hero data:', heroData);
-                
-                // 更新 UI
-                updateUI();
-                
-                // 注意：我们不需要转发消息到 Godot 游戏
-                // 因为我们不修改 Godot 游戏本身
+        window.addEventListener('message', function(event) {
+            try {
+                // 验证消息类型
+                if (event.data && event.data.type === 'HERO_DATA') {
+                    // 更新英雄数据
+                    heroData = event.data.payload;
+                    console.log('Bridge received hero data:', heroData);
+                    
+                    // 更新 UI
+                    updateUI();
+                    updateStatus('Hero data received');
+                    
+                    // 确认收到消息
+                    try {
+                        event.source.postMessage({
+                            type: 'HERO_DATA_RECEIVED',
+                            payload: { success: true }
+                        }, '*');
+                    } catch (error) {
+                        console.error('Error sending acknowledgment:', error);
+                    }
+                }
+            } catch (error) {
+                console.error('Error processing message:', error);
+                updateStatus('Error processing message');
             }
         });
         
         // 保存按钮点击事件
-        saveButton.addEventListener('click', () => {
-            // 模拟游戏进度
-            heroData.points += 10;
-            
-            // 更新 UI
-            updateUI();
-            
-            // 发送保存请求到父窗口
-            window.parent.postMessage({
-                type: 'SAVE_HERO',
-                payload: heroData
-            }, '*');
-            
-            console.log('Save request sent to parent');
+        saveButton.addEventListener('click', function() {
+            try {
+                // 模拟游戏进度
+                heroData.points += 10;
+                
+                // 更新 UI
+                updateUI();
+                updateStatus('Saving game...');
+                
+                // 发送保存请求到父窗口
+                window.parent.postMessage({
+                    type: 'SAVE_HERO',
+                    payload: heroData
+                }, '*');
+                
+                console.log('Save request sent to parent');
+            } catch (error) {
+                console.error('Error saving game:', error);
+                updateStatus('Error saving game');
+            }
         });
         
         // 模拟游戏内保存功能
         // 这是一个定时器，每 30 秒自动增加一些点数
         // 在实际游戏中，这应该由游戏内的事件触发
-        setInterval(() => {
-            // 随机增加 1-5 点数
-            const pointsEarned = Math.floor(Math.random() * 5) + 1;
-            heroData.points += pointsEarned;
-            
-            // 如果点数达到 50，升级
-            if (heroData.points >= 50) {
-                heroData.level += 1;
-                heroData.points -= 50;
+        setInterval(function() {
+            try {
+                // 随机增加 1-5 点数
+                const pointsEarned = Math.floor(Math.random() * 5) + 1;
+                heroData.points += pointsEarned;
+                
+                // 如果点数达到 50，升级
+                if (heroData.points >= 50) {
+                    heroData.level += 1;
+                    heroData.points -= 50;
+                }
+                
+                // 更新 UI
+                updateUI();
+                
+                console.log(`Earned ${pointsEarned} points in game simulation`);
+            } catch (error) {
+                console.error('Error in game simulation:', error);
             }
-            
-            // 更新 UI
-            updateUI();
-            
-            console.log(`Earned ${pointsEarned} points in game simulation`);
         }, 30000); // 每 30 秒执行一次
+        
+        // 错误处理
+        window.onerror = function(message, source, lineno, colno, error) {
+            console.error('Bridge error:', message, error);
+            updateStatus('Error: ' + message);
+            return true;
+        };
     </script>
 </body>
 </html> 
