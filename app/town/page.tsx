@@ -3,6 +3,8 @@ import { redirect } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { UserAvatar } from "@/components/auth-components"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import WalletSection from "@/components/wallet-section"
 
 export default async function TownPage() {
   const session = await auth()
@@ -10,10 +12,10 @@ export default async function TownPage() {
   // If not signed in, show login page
   if (!session?.user?.email) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-blue-900 to-black">
-        <div className="bg-black/50 p-8 rounded-lg backdrop-blur-sm">
-          <h1 className="text-3xl font-bold text-white mb-6">Welcome to Town</h1>
-          <p className="text-white mb-8">Please sign in to continue</p>
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <div className="bg-white p-8 rounded-lg shadow-md">
+          <h1 className="text-3xl font-bold mb-6">Welcome to Town</h1>
+          <p className="mb-8">Please sign in to continue</p>
           <Link 
             href="/auth/signin?callbackUrl=/town"
             className="block w-full text-center bg-primary hover:bg-primary/90 text-white font-bold py-2 px-4 rounded"
@@ -25,31 +27,86 @@ export default async function TownPage() {
     )
   }
 
-  // If signed in, show the town page with buttons
+  // If signed in, show the town page with sections
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-blue-900 to-black">
-      <div className="bg-black/50 p-8 rounded-lg backdrop-blur-sm">
-        <div className="flex items-center mb-6">
+    <div className="container mx-auto py-8">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center">
           <div className="mr-4">
             <UserAvatar user={session.user} />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-white">Welcome to Town</h1>
-            <p className="text-white">Hello, {session.user.name || session.user.email}</p>
+            <h1 className="text-3xl font-bold">Welcome to Town</h1>
+            <p>Hello, {session.user.name || session.user.email}</p>
           </div>
         </div>
         
-        <div className="grid grid-cols-2 gap-4 mt-8">
-          <Link href="/town/ethereum">
-            <Button className="w-full h-16 text-lg">Ethereum</Button>
-          </Link>
-          <Link href="/town/aptos">
-            <Button className="w-full h-16 text-lg">Aptos</Button>
-          </Link>
-          <Link href="/town/play">
-            <Button className="w-full h-16 text-lg bg-green-600 hover:bg-green-700">Play Game</Button>
-          </Link>
-        </div>
+        {/* Wallet Connection Section */}
+        <WalletSection />
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+        {/* Your NFTs Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Your NFTs</CardTitle>
+            <CardDescription>View and manage your NFT collection</CardDescription>
+          </CardHeader>
+          <CardContent className="h-40 flex items-center justify-center">
+            <p className="text-muted-foreground">No NFTs found</p>
+          </CardContent>
+          <CardFooter>
+            <Link href="/town/ethereum">
+              <Button className="w-full">View NFTs</Button>
+            </Link>
+          </CardFooter>
+        </Card>
+        
+        {/* Your Heroes Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Your Heroes</CardTitle>
+            <CardDescription>Manage your game heroes</CardDescription>
+          </CardHeader>
+          <CardContent className="h-40 flex items-center justify-center">
+            <p className="text-muted-foreground">No heroes found</p>
+          </CardContent>
+          <CardFooter>
+            <Link href="/town/play">
+              <Button className="w-full bg-green-600 hover:bg-green-700">Play Game</Button>
+            </Link>
+          </CardFooter>
+        </Card>
+        
+        {/* Your Assets Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Your Assets</CardTitle>
+            <CardDescription>View your tokens and other assets</CardDescription>
+          </CardHeader>
+          <CardContent className="h-40 flex items-center justify-center">
+            <p className="text-muted-foreground">No assets found</p>
+          </CardContent>
+          <CardFooter>
+            <Link href="/town/aptos">
+              <Button className="w-full">View Assets</Button>
+            </Link>
+          </CardFooter>
+        </Card>
+        
+        {/* Buy in Shop Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Buy in Shop</CardTitle>
+            <CardDescription>Purchase new items and upgrades</CardDescription>
+          </CardHeader>
+          <CardContent className="h-40 flex items-center justify-center">
+            <p className="text-muted-foreground">Shop coming soon</p>
+          </CardContent>
+          <CardFooter>
+            <Button className="w-full" disabled>Visit Shop</Button>
+          </CardFooter>
+        </Card>
       </div>
     </div>
   )

@@ -1,0 +1,50 @@
+// 以太坊合约地址
+export const ETHEREUM_CONTRACTS = {
+  // 代币合约
+  HERO_COIN_ADDRESS: process.env.NEXT_PUBLIC_HERO_COIN_ADDRESS || '0xBda48255DA1ed61a209641144Dd24696926aF3F0',
+  HERO_NFT_ADDRESS: process.env.NEXT_PUBLIC_HERO_NFT_ADDRESS || '0x00b203a541e4CD2C4373082bF2268A78E15CbD4B',
+  HERO_METADATA_ADDRESS: process.env.NEXT_PUBLIC_HERO_METADATA_ADDRESS || '0x3a57C9dd80d59Bee309288a8ADA28d494FcC51fB',
+  HERO_ADDRESS: process.env.NEXT_PUBLIC_HERO_ADDRESS || '0x9a838413a9Cf204535CF61df4479aACa92eA9E81',
+  
+  // 节点注册合约
+  TOKEN_CONTRACT_ADDRESS: process.env.NEXT_PUBLIC_TOKEN_CONTRACT_ADDRESS || '0xBda48255DA1ed61a209641144Dd24696926aF3F0',
+  STAKE_MANAGER_ADDRESS: process.env.NEXT_PUBLIC_STAKE_MANAGER_ADDRESS || '0xf7081161f19FB6246c1931aABd4fbe890DbdE8c4',
+  NODE_REGISTRY_ADDRESS: process.env.NEXT_PUBLIC_NODE_REGISTRY_ADDRESS || '0xE1A3B41be95Ff379DBDFd194680d26b5d8786462',
+}
+
+// Aptos合约地址
+export const APTOS_CONTRACTS = {
+  MOVE_HERO_COIN_ADDRESS: process.env.NEXT_PUBLIC_MOVE_HERO_COIN_ADDRESS || '0x53f7e4ab7f52b7030d5a53f343eb37c64d9a36838c5e545542e21dc7b8b4bfd8',
+  MOVE_HERO_NFT_ADDRESS: process.env.NEXT_PUBLIC_MOVE_HERO_NFT_ADDRESS || '0x53f7e4ab7f52b7030d5a53f343eb37c64d9a36838c5e545542e21dc7b8b4bfd8',
+  MOVE_HERO_METADATA_ADDRESS: process.env.NEXT_PUBLIC_MOVE_HERO_METADATA_ADDRESS || '0x53f7e4ab7f52b7030d5a53f343eb37c64d9a36838c5e545542e21dc7b8b4bfd8',
+  MOVE_HERO_ADDRESS: process.env.NEXT_PUBLIC_MOVE_HERO_ADDRESS || '0x53f7e4ab7f52b7030d5a53f343eb37c64d9a36838c5e545542e21dc7b8b4bfd8',
+}
+
+// RPC URLs
+export const RPC_URLS = {
+  OPTIMISM_TESTNET: process.env.NEXT_PUBLIC_OPTIMISM_TESTNET_RPC_URL || 'https://opt-sepolia.g.alchemy.com/v2/IIY_LZOlEuy66agzhxpYexmEaHuMskl-',
+}
+
+// 代币符号
+export const TOKEN_SYMBOLS = {
+  ETHEREUM: 'HERO',
+  APTOS: 'APT',
+}
+
+// 网络配置
+export const NETWORKS = {
+  ETHEREUM: {
+    chainId: '0xa',  // Optimism
+    chainName: 'Optimism',
+    nativeCurrency: {
+      name: 'Ethereum',
+      symbol: 'ETH',
+      decimals: 18,
+    },
+    rpcUrls: [RPC_URLS.OPTIMISM_TESTNET],
+    blockExplorerUrls: ['https://sepolia-optimism.etherscan.io/'],
+  },
+  APTOS: {
+    network: 'testnet',
+  },
+} 
