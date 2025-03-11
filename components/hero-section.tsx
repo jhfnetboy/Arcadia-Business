@@ -11,11 +11,13 @@ import { useBlockchainWallet } from './blockchain-wallet'
 import { ETHEREUM_CONTRACTS } from '@/lib/constants'
 import { ethers } from 'ethers'
 
-// ERC721 ABI
+// ERC721 ABI with Transfer event
 const ERC721_ABI = [
   'function balanceOf(address owner) view returns (uint256)',
   'function tokenOfOwnerByIndex(address owner, uint256 index) view returns (uint256)',
-  'function tokenURI(uint256 tokenId) view returns (string)'
+  'function tokenURI(uint256 tokenId) view returns (string)',
+  'function ownerOf(uint256 tokenId) view returns (address)',
+  'event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)'
 ]
 
 // Hero ABI
@@ -39,6 +41,12 @@ interface Hero {
   txHash?: string
 }
 
+interface NFT {
+  tokenId: string
+  tokenURI?: string
+  metadata?: any
+}
+
 interface HeroSectionProps {
   user: User
 }
@@ -49,84 +57,23 @@ export default function HeroSection({ user }: HeroSectionProps) {
   const [hero, setHero] = useState<Hero | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
-  const { ethereumAddress, aptosAddress } = useBlockchainWallet();
+  const [nfts, setNfts] = useState<NFT[]>([])
+  const [selectedNft, setSelectedNft] = useState<NFT | null>(null)
+  const { ethereumAddress, aptosAddress, currentNetwork } = useBlockchainWallet()
 
-  // 加载英雄数据
+  // 加载用户的 NFT
   useEffect(() => {
-    const fetchHero = async () => {
-      setIsLoading(true)
+    const loadNFTs = async () => {
+      if (!ethereumAddress || currentNetwork !== 'ethereum') return;
+      
+      setIsLoading(true);
       try {
-        // 首先尝试从API加载
-        const response = await fetch('/api/hero/get')
-        const data = await response.json()
+        const provider = new ethers.providers.Web3Provider(window.ethereum as any);
         
-        if (data.success && data.hero) {
-          setHero(data.hero)
-          setIsLoading(false)
-          return
-        }
-        
-        // 如果API没有数据，尝试从区块链加载
-        if (ethereumAddress && window.ethereum) {
-          await loadHeroFromBlockchain(ethereumAddress)
-        } else {
-          setIsLoading(false)
-        }
-      } catch (error) {
-        console.error('Error fetching hero:', error)
-        setIsLoading(false)
-      }
-    }
-
-    fetchHero()
-  }, [ethereumAddress])
-
-  // 从区块链加载英雄数据
-  const loadHeroFromBlockchain = async (address: string) => {
-    try {
-      if (!window.ethereum) {
-        console.log('MetaMask is not installed');
-        setIsLoading(false);
-        return;
-      }
-      
-      // 使用 window.ethereum 请求
-      const provider = new ethers.providers.Web3Provider(window.ethereum as any);
-      const signer = provider.getSigner();
-      
-      // 检查合约地址是否有效
-      if (!ETHEREUM_CONTRACTS.HERO_NFT_ADDRESS || ETHEREUM_CONTRACTS.HERO_NFT_ADDRESS === '0x0000000000000000000000000000000000000000') {
-        console.error('Invalid NFT contract address');
-        toast.error('Invalid NFT contract address');
-        setIsLoading(false);
-        return;
-      }
-      
-      // 检查网络是否正确
-      try {
-        const network = await provider.getNetwork();
-        console.log('Current network:', network.name, network.chainId);
-      } catch (networkError) {
-        console.error('Error checking network:', networkError);
-        toast.error('Error checking network');
-        setIsLoading(false);
-        return;
-      }
-      
-      try {
-        // 检查合约是否存在
-        try {
-          const code = await provider.getCode(ETHEREUM_CONTRACTS.HERO_NFT_ADDRESS);
-          if (code === '0x') {
-            console.error('Contract does not exist at the specified address');
-            toast.error('NFT contract does not exist at the specified address');
-            setIsLoading(false);
-            return;
-          }
-        } catch (contractError) {
-          console.error('Error checking contract existence:', contractError);
-          toast.error('Error checking NFT contract existence');
-          setIsLoading(false);
+        // 检查合约地址是否有效
+        if (!ETHEREUM_CONTRACTS.HERO_NFT_ADDRESS) {
+          console.error('Invalid NFT contract address');
+          toast.error('Invalid NFT contract address');
           return;
         }
         
@@ -137,249 +84,115 @@ export default function HeroSection({ user }: HeroSectionProps) {
           provider
         );
         
-        // 创建英雄合约实例 (如果有)
-        let heroContract: ethers.Contract | null = null;
-        if (ETHEREUM_CONTRACTS.HERO_ADDRESS) {
+        // 获取用户的 NFT 数量
+        const balance = await nftContract.balanceOf(ethereumAddress);
+        console.log('NFT balance:', balance.toString());
+        
+        // 获取所有的 NFT
+        const userNfts: NFT[] = [];
+        for (let i = 0; i < balance.toNumber(); i++) {
           try {
-            const heroCode = await provider.getCode(ETHEREUM_CONTRACTS.HERO_ADDRESS);
-            if (heroCode !== '0x') {
-              heroContract = new ethers.Contract(
-                ETHEREUM_CONTRACTS.HERO_ADDRESS,
-                HERO_ABI,
-                signer
-              );
-              console.log('Hero contract initialized');
+            const tokenId = await nftContract.tokenOfOwnerByIndex(ethereumAddress, i);
+            console.log('Found token ID:', tokenId.toString());
+            
+            let tokenURI;
+            try {
+              tokenURI = await nftContract.tokenURI(tokenId);
+            } catch (uriError) {
+              console.error('Error getting token URI:', uriError);
             }
-          } catch (heroContractError) {
-            console.error('Error initializing hero contract:', heroContractError);
+            
+            userNfts.push({
+              tokenId: tokenId.toString(),
+              tokenURI
+            });
+          } catch (error) {
+            console.error('Error getting token ID:', error);
+            continue;
           }
         }
         
-        // 检查用户是否拥有NFT
-        let balance;
-        try {
-          balance = await nftContract.balanceOf(address);
-          console.log('NFT balance:', balance.toString());
-        } catch (balanceError) {
-          console.error('Error checking NFT balance:', balanceError);
-          toast.error('Error checking NFT balance');
-          
-          // 创建一个默认的英雄
-          const defaultHero: Hero = {
-            name: `Hero of ${address.substring(0, 6)}`,
-            points: 0,
-            level: 1,
-            userId: user.email || 'unknown',
-            createdAt: new Date().toISOString()
-          };
-          
-          setHero(defaultHero);
-          setIsLoading(false);
+        setNfts(userNfts);
+      } catch (error) {
+        console.error('Error loading NFTs:', error);
+        toast.error('Error loading NFTs');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadNFTs();
+  }, [ethereumAddress, currentNetwork]);
+
+  // 加载选中 NFT 的英雄信息
+  useEffect(() => {
+    const loadHeroInfo = async () => {
+      if (!selectedNft || !ethereumAddress) return;
+      
+      setIsLoading(true);
+      try {
+        const provider = new ethers.providers.Web3Provider(window.ethereum as any);
+        const signer = provider.getSigner();
+        
+        // 创建英雄合约实例
+        if (!ETHEREUM_CONTRACTS.HERO_ADDRESS) {
+          console.error('Invalid hero contract address');
           return;
         }
         
-        if (balance && balance.toNumber() > 0) {
-          // 获取用户的第一个NFT的tokenId
-          let tokenId;
-          try {
-            // 尝试使用 tokenOfOwnerByIndex 方法
-            tokenId = await nftContract.tokenOfOwnerByIndex(address, 0);
-            console.log('Token ID:', tokenId.toString());
-          } catch (tokenError) {
-            console.error('Error getting token ID:', tokenError);
-            
-            // 尝试获取所有的 NFT 事件来确定 tokenId
-            try {
-              const transferEvents = await nftContract.queryFilter(
-                nftContract.filters.Transfer(null, address, null)
-              );
-              
-              if (transferEvents.length > 0) {
-                // 使用最近的转账事件
-                const latestEvent = transferEvents[transferEvents.length - 1];
-                tokenId = latestEvent.args?.tokenId;
-                console.log('Token ID from events:', tokenId.toString());
-              } else {
-                throw new Error('No transfer events found');
-              }
-            } catch (eventsError) {
-              console.error('Error getting token events:', eventsError);
-              
-              // 创建一个默认的英雄，因为用户确实拥有NFT，但我们无法获取tokenId
-              const defaultHero: Hero = {
-                name: `Hero of ${address.substring(0, 6)}`,
-                points: 0,
-                level: 1,
-                userId: user.email || 'unknown',
-                createdAt: new Date().toISOString()
-              };
-              
-              setHero(defaultHero);
-              setIsLoading(false);
-              return;
-            }
-          }
-          
-          // 如果有英雄合约，尝试获取英雄信息
-          if (heroContract) {
-            try {
-              const heroInfo = await (heroContract as any).getHeroInfo(ETHEREUM_CONTRACTS.HERO_NFT_ADDRESS, tokenId);
-              console.log('Hero info from contract:', heroInfo);
-              
-              // 创建基于合约数据的英雄
-              const contractHero: Hero = {
-                name: heroInfo.name || `Hero #${tokenId.toString()}`,
-                points: heroInfo.dailyPoints ? parseInt(heroInfo.dailyPoints.toString()) : 0,
-                level: heroInfo.level ? parseInt(heroInfo.level.toString()) : 1,
-                userId: user.email || 'unknown',
-                createdAt: new Date().toISOString(),
-                tokenId: tokenId.toString()
-              };
-              
-              setHero(contractHero);
-              
-              // 保存到API
-              try {
-                await saveHero(contractHero);
-              } catch (saveError) {
-                console.error('Error saving hero to API:', saveError);
-              }
-              
-              setIsLoading(false);
-              return;
-            } catch (heroInfoError) {
-              console.log('Hero info not found in contract, falling back to metadata:', heroInfoError);
-              // 继续使用元数据方法
-            }
-          }
-          
-          // 获取NFT的元数据URI
-          let tokenURI;
-          try {
-            tokenURI = await nftContract.tokenURI(tokenId);
-            console.log('Token URI:', tokenURI);
-          } catch (uriError) {
-            console.error('Error getting token URI:', uriError);
-            
-            // 创建一个基于tokenId的英雄
-            const tokenIdHero: Hero = {
-              name: `Hero #${tokenId.toString()}`,
-              points: 0,
-              level: 1,
-              userId: user.email || 'unknown',
-              createdAt: new Date().toISOString(),
-              tokenId: tokenId.toString()
-            };
-            
-            setHero(tokenIdHero);
-            
-            // 保存到API
-            try {
-              await saveHero(tokenIdHero);
-            } catch (saveError) {
-              console.error('Error saving hero to API:', saveError);
-            }
-            
-            setIsLoading(false);
-            return;
-          }
-          
-          // 获取元数据
-          let metadata = {};
-          try {
-            // 如果tokenURI是IPFS链接，需要转换为HTTP链接
-            const url = tokenURI.replace('ipfs://', 'https://ipfs.io/ipfs/');
-            const metadataResponse = await fetch(url);
-            metadata = await metadataResponse.json();
-          } catch (error) {
-            console.error('Error fetching metadata:', error);
-            metadata = { name: `Hero #${tokenId.toString()}`, attributes: [] };
-          }
+        const heroContract = new ethers.Contract(
+          ETHEREUM_CONTRACTS.HERO_ADDRESS,
+          HERO_ABI,
+          signer
+        );
+        
+        try {
+          const heroInfo = await heroContract.getHeroInfo(
+            ETHEREUM_CONTRACTS.HERO_NFT_ADDRESS,
+            selectedNft.tokenId
+          );
           
           // 创建英雄对象
-          const blockchainHero: Hero = {
-            name: (metadata as any).name || `Hero #${tokenId.toString()}`,
+          const newHero: Hero = {
+            name: heroInfo.name || `Hero #${selectedNft.tokenId}`,
+            points: heroInfo.dailyPoints ? parseInt(heroInfo.dailyPoints.toString()) : 0,
+            level: heroInfo.level ? parseInt(heroInfo.level.toString()) : 1,
+            userId: user.email || 'unknown',
+            createdAt: new Date().toISOString(),
+            tokenId: selectedNft.tokenId
+          };
+          
+          setHero(newHero);
+          
+          // 保存到 API
+          await saveHero(newHero);
+        } catch (error) {
+          console.error('Error getting hero info:', error);
+          // 如果合约调用失败，创建新的英雄
+          const newHero: Hero = {
+            name: `Hero #${selectedNft.tokenId}`,
             points: 0,
             level: 1,
             userId: user.email || 'unknown',
             createdAt: new Date().toISOString(),
-            tokenId: tokenId.toString()
+            tokenId: selectedNft.tokenId
           };
           
-          setHero(blockchainHero);
-          
-          // 保存到API
-          try {
-            await fetch('/api/hero/save', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(blockchainHero),
-            });
-          } catch (error) {
-            console.error('Error saving hero to API:', error);
-          }
-        } else {
-          console.log('User has no NFTs');
+          setHero(newHero);
+          await saveHero(newHero);
         }
-      } catch (contractError) {
-        console.error('Error interacting with contract:', contractError);
+      } catch (error) {
+        console.error('Error loading hero info:', error);
+        toast.error('Error loading hero info');
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error('Error loading hero from blockchain:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // 创建英雄
-  const createHero = () => {
-    if (!heroName.trim()) {
-      toast.error('Please enter a hero name')
-      return
-    }
-
-    setIsCreating(true)
+    };
     
-    try {
-      // 创建英雄数据（仅在本地状态中）
-      const newHero: Hero = {
-        name: heroName,
-        points: 0,
-        level: 1,
-        userId: user.email || 'unknown',
-        createdAt: new Date().toISOString()
-      }
-      
-      // 设置本地状态
-      setHero(newHero)
-      toast.success(`Hero ${heroName} created!`)
-      
-      // 保存到API
-      fetch('/api/hero/save', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(newHero),
-      }).catch(error => {
-        console.error('Error saving hero to API:', error)
-      })
-      
-      // 直接导航到游戏页面
-      setTimeout(() => {
-        router.push('/town/play')
-      }, 500)
-    } catch (error) {
-      console.error('Error creating hero:', error)
-      toast.error('Error creating hero')
-    } finally {
-      setIsCreating(false)
-    }
-  }
+    loadHeroInfo();
+  }, [selectedNft, ethereumAddress, user.email]);
 
-  // 保存英雄到API
+  // 保存英雄到 API
   const saveHero = async (hero: Hero) => {
     try {
       const response = await fetch('/api/heroes', {
@@ -402,41 +215,83 @@ export default function HeroSection({ user }: HeroSectionProps) {
   };
 
   return (
-    <Card className="h-64">
+    <Card className="h-full">
       <CardHeader>
         <CardTitle>Your Heroes</CardTitle>
         <CardDescription>Manage your game heroes</CardDescription>
       </CardHeader>
       
-      <CardContent className="h-24">
+      <CardContent>
         {isLoading ? (
-          <div className="flex items-center justify-center h-full">
-            <p>Loading hero data...</p>
-          </div>
-        ) : hero ? (
-          <div className="space-y-2">
-            <p><strong>Name:</strong> {hero.name}</p>
-            <p><strong>Level:</strong> {hero.level} | <strong>Points:</strong> {hero.points}</p>
-            {hero.tokenId && (
-              <p className="text-xs text-green-600">
-                <strong>Token ID:</strong> {hero.tokenId}
-              </p>
-            )}
-            {hero.txHash && (
-              <p className="text-xs text-green-600">
-                <strong>Blockchain TX:</strong> {hero.txHash.substring(0, 10)}...
-              </p>
-            )}
+          <div className="flex items-center justify-center h-24">
+            <p>Loading...</p>
           </div>
         ) : (
-          <div className="flex flex-col space-y-2">
-            <Input
-              type="text"
-              placeholder="Enter hero name"
-              value={heroName}
-              onChange={(e) => setHeroName(e.target.value)}
-              className="flex-1"
-            />
+          <div className="space-y-4">
+            {/* NFT 列表 */}
+            {nfts.length > 0 ? (
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium">Your NFTs</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {nfts.map((nft) => (
+                    <Button
+                      key={nft.tokenId}
+                      variant={selectedNft?.tokenId === nft.tokenId ? "default" : "outline"}
+                      onClick={() => setSelectedNft(nft)}
+                      className="w-full"
+                    >
+                      Token #{nft.tokenId}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            ) : currentNetwork === 'ethereum' ? (
+              <p className="text-sm text-gray-500">No NFTs found in your wallet</p>
+            ) : null}
+            
+            {/* 英雄信息 */}
+            {hero ? (
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium">Hero Information</h3>
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <p><strong>Name:</strong> {hero.name}</p>
+                  <p><strong>Level:</strong> {hero.level} | <strong>Points:</strong> {hero.points}</p>
+                  {hero.tokenId && (
+                    <p className="text-xs text-green-600">
+                      <strong>Token ID:</strong> {hero.tokenId}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ) : selectedNft ? (
+              <div className="space-y-2">
+                <Input
+                  type="text"
+                  placeholder="Enter hero name"
+                  value={heroName}
+                  onChange={(e) => setHeroName(e.target.value)}
+                  className="w-full"
+                />
+                <Button
+                  onClick={() => {
+                    const newHero: Hero = {
+                      name: heroName || `Hero #${selectedNft.tokenId}`,
+                      points: 0,
+                      level: 1,
+                      userId: user.email || 'unknown',
+                      createdAt: new Date().toISOString(),
+                      tokenId: selectedNft.tokenId
+                    };
+                    setHero(newHero);
+                    saveHero(newHero);
+                  }}
+                  disabled={isCreating}
+                  className="w-full"
+                >
+                  Create Hero with Selected NFT
+                </Button>
+              </div>
+            ) : null}
           </div>
         )}
       </CardContent>
@@ -448,15 +303,7 @@ export default function HeroSection({ user }: HeroSectionProps) {
               Play Game
             </Button>
           </Link>
-        ) : (
-          <Button 
-            onClick={createHero} 
-            disabled={isCreating || !heroName.trim()}
-            className="w-full"
-          >
-            {isCreating ? 'Creating...' : 'Create Hero'}
-          </Button>
-        )}
+        ) : null}
       </CardFooter>
     </Card>
   )

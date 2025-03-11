@@ -1,41 +1,42 @@
 'use client'
 
-import { useState, useEffect, createContext, useContext, ReactNode } from 'react'
+import React, { createContext, useContext, useState, useEffect } from 'react'
+import { ethers } from 'ethers'
+import { toast } from 'sonner'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import MetamaskConnector from './metamask-connector'
 import PetraConnector from './petra-connector'
 import { ETHEREUM_CONTRACTS, APTOS_CONTRACTS, TOKEN_SYMBOLS } from '@/lib/constants'
-import { toast } from 'sonner'
 
-// 定义区块链钱包上下文类型
+type NetworkType = 'ethereum' | 'aptos' | null;
+
 interface BlockchainWalletContextType {
-  ethereumAddress: string | null;
-  aptosAddress: string | null;
-  ethereumBalance: string | null;
-  aptosBalance: string | null;
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
-  isConnecting: boolean;
-  updateEthereumBalance: (balance: string) => void;
-  updateAptosBalance: (balance: string) => void;
-  ethereumNetwork: string | null;
-  aptosNetwork: string | null;
+  ethereumAddress: string | null
+  aptosAddress: string | null
+  ethereumBalance: string | null
+  aptosBalance: string | null
+  currentNetwork: NetworkType
+  updateEthereumBalance: (balance: string) => void
+  updateAptosBalance: (balance: string) => void
+  setCurrentNetwork: (network: NetworkType) => void
+  connectEthereum: () => Promise<void>
+  connectAptos: () => Promise<void>
+  disconnectWallet: () => Promise<void>
 }
 
-// 创建上下文
 const BlockchainWalletContext = createContext<BlockchainWalletContextType>({
   ethereumAddress: null,
   aptosAddress: null,
   ethereumBalance: null,
   aptosBalance: null,
-  activeTab: 'ethereum',
-  setActiveTab: () => {},
-  isConnecting: false,
+  currentNetwork: null,
   updateEthereumBalance: () => {},
   updateAptosBalance: () => {},
-  ethereumNetwork: null,
-  aptosNetwork: null,
-});
+  setCurrentNetwork: () => {},
+  connectEthereum: async () => {},
+  connectAptos: async () => {},
+  disconnectWallet: async () => {}
+})
 
 // 网络ID到名称的映射
 const ETHEREUM_NETWORKS: Record<string, string> = {
@@ -54,264 +55,153 @@ const ETHEREUM_NETWORKS: Record<string, string> = {
   '421613': 'Arbitrum Goerli',
 };
 
-// 创建Provider组件
-export function BlockchainWalletProvider({ children }: { children: ReactNode }) {
-  const [ethereumAddress, setEthereumAddress] = useState<string | null>(null);
-  const [aptosAddress, setAptosAddress] = useState<string | null>(null);
-  const [ethereumBalance, setEthereumBalance] = useState<string | null>(null);
-  const [aptosBalance, setAptosBalance] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('ethereum');
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [ethereumNetwork, setEthereumNetwork] = useState<string | null>(null);
-  const [aptosNetwork, setAptosNetwork] = useState<string | null>(null);
+export function BlockchainWalletProvider({ children }: { children: React.ReactNode }) {
+  const [ethereumAddress, setEthereumAddress] = useState<string | null>(null)
+  const [aptosAddress, setAptosAddress] = useState<string | null>(null)
+  const [ethereumBalance, setEthereumBalance] = useState<string | null>(null)
+  const [aptosBalance, setAptosBalance] = useState<string | null>(null)
+  const [currentNetwork, setCurrentNetwork] = useState<NetworkType>(null)
 
-  // 检查以太坊网络
-  const checkEthereumNetwork = async () => {
-    if (typeof window !== 'undefined' && window.ethereum) {
-      try {
-        const chainId = await window.ethereum!.request({ method: 'eth_chainId' });
-        const networkName = ETHEREUM_NETWORKS[parseInt(chainId, 16).toString()] || `Chain ID: ${parseInt(chainId, 16)}`;
-        setEthereumNetwork(networkName);
-        console.log('Current Ethereum network:', networkName);
-      } catch (error) {
-        console.error('Error checking Ethereum network:', error);
-        setEthereumNetwork(null);
+  // 连接以太坊钱包
+  const connectEthereum = async () => {
+    if (typeof window === 'undefined' || !window.ethereum) {
+      toast.error('MetaMask not installed');
+      return;
+    }
+
+    try {
+      // 请求账户访问
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      if (accounts && accounts.length > 0) {
+        setEthereumAddress(accounts[0]);
+        setCurrentNetwork('ethereum');
+        
+        // 获取余额
+        const provider = new ethers.providers.Web3Provider(window.ethereum as any);
+        const balance = await provider.getBalance(accounts[0]);
+        const etherBalance = ethers.utils.formatEther(balance);
+        setEthereumBalance(parseFloat(etherBalance).toFixed(4));
+        
+        toast.success('MetaMask connected successfully!');
       }
+    } catch (error) {
+      console.error('Error connecting to MetaMask:', error);
+      toast.error('Failed to connect to MetaMask');
     }
   };
 
-  // 监听MetaMask连接状态
+  // 连接 Aptos 钱包
+  const connectAptos = async () => {
+    if (typeof window === 'undefined') {
+      toast.error('Browser environment not available');
+      return;
+    }
+
+    const petraWallet = window.aptos;
+    
+    if (!petraWallet) {
+      toast.error('Petra wallet not installed');
+      window.open('https://petra.app/', '_blank');
+      return;
+    }
+
+    try {
+      const response = await petraWallet.connect();
+      const address = response.address;
+      setAptosAddress(address);
+      setCurrentNetwork('aptos');
+      toast.success('Petra wallet connected successfully!');
+    } catch (error) {
+      console.error('Error connecting to Petra wallet:', error);
+      toast.error('Failed to connect to Petra wallet');
+    }
+  };
+
+  // 断开钱包连接
+  const disconnectWallet = async () => {
+    if (currentNetwork === 'ethereum') {
+      setEthereumAddress(null);
+      setEthereumBalance(null);
+    } else if (currentNetwork === 'aptos') {
+      try {
+        if (window.aptos) {
+          await window.aptos.disconnect();
+        }
+      } catch (error) {
+        console.error('Error disconnecting from Petra:', error);
+      }
+      setAptosAddress(null);
+      setAptosBalance(null);
+    }
+    setCurrentNetwork(null);
+  };
+
+  // 监听以太坊账户变化
   useEffect(() => {
     if (typeof window !== 'undefined' && window.ethereum) {
       const handleAccountsChanged = (accounts: string[]) => {
-        if (accounts.length > 0) {
-          setEthereumAddress(accounts[0]);
-          fetchEthereumBalance(accounts[0]);
-        } else {
+        if (accounts.length === 0) {
           setEthereumAddress(null);
           setEthereumBalance(null);
+          if (currentNetwork === 'ethereum') {
+            setCurrentNetwork(null);
+          }
+        } else if (currentNetwork === 'ethereum') {
+          setEthereumAddress(accounts[0]);
         }
       };
 
-      // 监听网络变化
-      const handleChainChanged = (chainId: string) => {
-        const networkName = ETHEREUM_NETWORKS[parseInt(chainId, 16).toString()] || `Chain ID: ${parseInt(chainId, 16)}`;
-        setEthereumNetwork(networkName);
-        console.log('Ethereum network changed:', networkName);
-        
-        // 当网络变化时，重新获取余额
-        if (ethereumAddress) {
-          fetchEthereumBalance(ethereumAddress);
-        }
-      };
-
-      // 初始检查
-      window.ethereum!.request({ method: 'eth_accounts' })
-        .then(handleAccountsChanged)
-        .catch(console.error);
-
-      // 检查网络
-      checkEthereumNetwork();
-
-      // 监听账户变化
-      window.ethereum!.on('accountsChanged', handleAccountsChanged);
-      
-      // 监听网络变化
-      window.ethereum!.on('chainChanged', handleChainChanged);
-
+      window.ethereum.on('accountsChanged', handleAccountsChanged);
       return () => {
-        window.ethereum!.removeListener('accountsChanged', handleAccountsChanged);
-        window.ethereum!.removeListener('chainChanged', handleChainChanged);
+        window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
       };
     }
-  }, [ethereumAddress]);
+  }, [currentNetwork]);
 
-  // 监听Petra钱包连接状态
+  // 监听 Aptos 账户变化
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.aptosWallets) {
-      const checkPetraConnection = async () => {
-        const petraWallet = window.aptosWallets!.find(wallet => wallet.name === 'Petra');
-        if (petraWallet) {
-          try {
-            const isConnected = await petraWallet.isConnected();
-            if (isConnected) {
-              const account = await petraWallet.account();
-              setAptosAddress(account.address);
-              
-              // 检查网络
-              try {
-                const network = await petraWallet.network();
-                setAptosNetwork(network);
-                console.log('Current Aptos network:', network);
-              } catch (networkError) {
-                console.error('Error checking Aptos network:', networkError);
-              }
-              
-              fetchAptosBalance();
-            }
-          } catch (error) {
-            console.error('Error checking Petra connection:', error);
+    if (typeof window !== 'undefined' && window.aptos) {
+      const handleAccountChange = (account: any) => {
+        if (!account) {
+          setAptosAddress(null);
+          setAptosBalance(null);
+          if (currentNetwork === 'aptos') {
+            setCurrentNetwork(null);
           }
+        } else if (currentNetwork === 'aptos') {
+          setAptosAddress(account.address);
         }
       };
 
-      checkPetraConnection();
-      
-      // 由于Petra钱包没有直接的事件监听，我们使用轮询
-      const intervalId = setInterval(checkPetraConnection, 5000);
-      
+      window.aptos.onAccountChange(handleAccountChange);
       return () => {
-        clearInterval(intervalId);
+        // Cleanup if needed
       };
     }
-  }, []);
+  }, [currentNetwork]);
 
-  // 查询以太坊代币余额
-  const fetchEthereumBalance = async (address: string) => {
-    if (!address || !window.ethereum) return;
-
-    try {
-      // ERC20 balanceOf 函数的 ABI 编码
-      const data = `0x70a08231000000000000000000000000${address.slice(2)}`;
-      
-      const result = await window.ethereum.request({
-        method: 'eth_call',
-        params: [
-          {
-            to: ETHEREUM_CONTRACTS.HERO_COIN_ADDRESS,
-            data
-          },
-          'latest'
-        ]
-      });
-      
-      // 将十六进制结果转换为十进制
-      const balanceInWei = parseInt(result, 16).toString();
-      
-      // 假设代币有18位小数（如ETH）
-      const balanceInEther = parseFloat(balanceInWei) / 10**18;
-      
-      setEthereumBalance(balanceInEther.toFixed(4));
-    } catch (error) {
-      console.error('Error fetching Ethereum token balance:', error);
-      setEthereumBalance('0');
-      
-      // 检查是否是合约不存在的错误
-      if (error && (error as any).message && (error as any).message.includes('execution reverted')) {
-        toast.error('Token contract not found on this network. Please switch to the correct network.');
-      }
-    }
-  };
-
-  // 查询Aptos代币余额
-  const fetchAptosBalance = async () => {
-    try {
-      // 使用特定地址查询余额
-      const SPECIFIC_TOKEN_ADDRESS = '0x53f7e4ab7f52b7030d5a53f343eb37c64d9a36838c5e545542e21dc7b8b4bfd8';
-      
-      // 尝试使用多个网络端点
-      const endpoints = [
-        // Testnet
-        `https://fullnode.testnet.aptoslabs.com/v1/accounts/${SPECIFIC_TOKEN_ADDRESS}/resources`,
-        // Mainnet
-        `https://fullnode.mainnet.aptoslabs.com/v1/accounts/${SPECIFIC_TOKEN_ADDRESS}/resources`,
-        // Devnet
-        `https://fullnode.devnet.aptoslabs.com/v1/accounts/${SPECIFIC_TOKEN_ADDRESS}/resources`
-      ];
-      
-      let resources: any[] = [];
-      let responseOk = false;
-      let successEndpoint = '';
-      
-      // 尝试所有端点，直到找到一个有效的
-      for (const endpoint of endpoints) {
-        try {
-          const response = await fetch(endpoint);
-          if (response.ok) {
-            resources = await response.json();
-            responseOk = true;
-            successEndpoint = endpoint;
-            console.log(`Successfully connected to Aptos endpoint: ${endpoint}`);
-            break;
-          }
-        } catch (endpointError) {
-          console.log(`Failed to connect to endpoint: ${endpoint}`, endpointError);
-        }
-      }
-      
-      // 如果所有端点都失败
-      if (!responseOk || !resources || !Array.isArray(resources)) {
-        console.error('All Aptos network endpoints failed');
-        setAptosBalance('0');
-        return;
-      }
-      
-      // 设置网络信息
-      if (successEndpoint.includes('testnet')) {
-        setAptosNetwork('Testnet');
-      } else if (successEndpoint.includes('mainnet')) {
-        setAptosNetwork('Mainnet');
-      } else if (successEndpoint.includes('devnet')) {
-        setAptosNetwork('Devnet');
-      }
-      
-      // 对于原生APT代币
-      if (APTOS_CONTRACTS.MOVE_HERO_COIN_ADDRESS === '0x1::aptos_coin::AptosCoin') {
-        const aptCoinResource = resources.find((r: any) => 
-          r.type === '0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>'
-        );
-        
-        if (aptCoinResource && aptCoinResource.data && aptCoinResource.data.coin) {
-          const balanceInApt = parseFloat(aptCoinResource.data.coin.value) / 10**8;
-          setAptosBalance(balanceInApt.toFixed(4));
-        } else {
-          setAptosBalance('0');
-        }
-        return;
-      }
-      
-      // 对于其他代币
-      const coinType = `0x1::coin::CoinStore<${APTOS_CONTRACTS.MOVE_HERO_COIN_ADDRESS}>`;
-      const resource = resources.find((r: any) => r.type === coinType);
-      
-      if (resource && resource.data && resource.data.coin) {
-        const balanceInApt = parseFloat(resource.data.coin.value) / 10**8;
-        setAptosBalance(balanceInApt.toFixed(4));
-      } else {
-        setAptosBalance('0');
-      }
-    } catch (error) {
-      console.error('Error fetching Aptos token balance:', error);
-      setAptosBalance('0');
-    }
-  };
-
-  // 提供上下文值
-  const contextValue = {
+  const value = {
     ethereumAddress,
     aptosAddress,
     ethereumBalance,
     aptosBalance,
-    activeTab,
-    setActiveTab,
-    isConnecting,
+    currentNetwork,
     updateEthereumBalance: setEthereumBalance,
     updateAptosBalance: setAptosBalance,
-    ethereumNetwork,
-    aptosNetwork,
+    setCurrentNetwork,
+    connectEthereum,
+    connectAptos,
+    disconnectWallet
   };
 
   return (
-    <BlockchainWalletContext.Provider value={contextValue}>
+    <BlockchainWalletContext.Provider value={value}>
       {children}
     </BlockchainWalletContext.Provider>
   );
 }
 
-// 创建自定义Hook
-export function useBlockchainWallet() {
-  return useContext(BlockchainWalletContext);
-}
+export const useBlockchainWallet = () => useContext(BlockchainWalletContext);
 
 // 区块链钱包连接组件
 interface BlockchainWalletProps {
@@ -319,22 +209,28 @@ interface BlockchainWalletProps {
 }
 
 export default function BlockchainWallet({ className = '' }: BlockchainWalletProps) {
-  const { activeTab, setActiveTab, ethereumNetwork, aptosNetwork } = useBlockchainWallet();
+  const { currentNetwork } = useBlockchainWallet();
   
   return (
     <div className={`bg-white p-4 rounded-lg shadow-md ${className}`}>
-      <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
+      <Tabs defaultValue={currentNetwork || 'ethereum'} onValueChange={(value) => {
+        if (value === 'ethereum') {
+          useBlockchainWallet().setCurrentNetwork('ethereum');
+        } else if (value === 'aptos') {
+          useBlockchainWallet().setCurrentNetwork('aptos');
+        }
+      }}>
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="ethereum">
             Ethereum
-            {ethereumNetwork && (
-              <span className="ml-1 text-xs text-gray-500">({ethereumNetwork})</span>
+            {currentNetwork === 'ethereum' && (
+              <span className="ml-1 text-xs text-gray-500">({ETHEREUM_NETWORKS[currentNetwork]})</span>
             )}
           </TabsTrigger>
           <TabsTrigger value="aptos">
             Aptos
-            {aptosNetwork && (
-              <span className="ml-1 text-xs text-gray-500">({aptosNetwork})</span>
+            {currentNetwork === 'aptos' && (
+              <span className="ml-1 text-xs text-gray-500">({ETHEREUM_NETWORKS[currentNetwork]})</span>
             )}
           </TabsTrigger>
         </TabsList>
