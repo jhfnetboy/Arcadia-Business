@@ -61,15 +61,19 @@ export function BlockchainWalletProvider({ children }: { children: React.ReactNo
   const [ethereumBalance, setEthereumBalance] = useState<string | null>(null)
   const [aptosBalance, setAptosBalance] = useState<string | null>(null)
   const [currentNetwork, setCurrentNetwork] = useState<NetworkType>(null)
+  const [isConnecting, setIsConnecting] = useState(false)
 
   // 连接以太坊钱包
   const connectEthereum = async () => {
     if (typeof window === 'undefined' || !window.ethereum) {
       toast.error('MetaMask not installed');
+      window.open('https://metamask.io/download/', '_blank');
       return;
     }
 
     try {
+      setIsConnecting(true);
+      
       // 请求账户访问
       const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
       if (accounts && accounts.length > 0) {
@@ -82,11 +86,53 @@ export function BlockchainWalletProvider({ children }: { children: React.ReactNo
         const etherBalance = ethers.utils.formatEther(balance);
         setEthereumBalance(parseFloat(etherBalance).toFixed(4));
         
+        // 获取网络信息
+        const network = await provider.getNetwork();
+        console.log('Connected to network:', network.name, 'Chain ID:', network.chainId);
+        
+        // 查询 NFT 合约
+        try {
+          // 获取环境变量中的 NFT 合约地址
+          const nftContractAddress = process.env.NEXT_PUBLIC_HERO_NFT_ADDRESS || 
+                                    process.env.VITE_HERO_NFT_ADDRESS || 
+                                    ETHEREUM_CONTRACTS.HERO_NFT_ADDRESS;
+          
+          if (nftContractAddress) {
+            console.log('Checking NFT contract:', nftContractAddress);
+            
+            // 简化版的 ERC721 ABI
+            const erc721Abi = [
+              'function balanceOf(address owner) view returns (uint256)',
+              'function tokenOfOwnerByIndex(address owner, uint256 index) view returns (uint256)',
+              'function tokenURI(uint256 tokenId) view returns (string)'
+            ];
+            
+            // 创建合约实例
+            const nftContract = new ethers.Contract(nftContractAddress, erc721Abi, provider);
+            
+            // 检查用户拥有的 NFT 数量
+            const nftBalance = await nftContract.balanceOf(accounts[0]);
+            console.log('NFT balance:', nftBalance.toString());
+            
+            if (nftBalance.toNumber() > 0) {
+              toast.success(`Found ${nftBalance.toString()} NFTs in your wallet!`);
+            } else {
+              toast.info('No NFTs found in your wallet');
+            }
+          } else {
+            console.warn('NFT contract address not found in environment variables');
+          }
+        } catch (nftError) {
+          console.error('Error checking NFT contract:', nftError);
+        }
+        
         toast.success('MetaMask connected successfully!');
       }
     } catch (error) {
       console.error('Error connecting to MetaMask:', error);
       toast.error('Failed to connect to MetaMask');
+    } finally {
+      setIsConnecting(false);
     }
   };
 

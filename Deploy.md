@@ -312,3 +312,16 @@ Transaction 表中存在 merchantId，String          @map("merchant_id") 和 me
 http://localhost:3000/town页面, 
 1. 页面背景色去掉渐变色，改为白色
 
+以太坊钱包连接：
+点击 "Connect MetaMask" 按钮连接以太坊钱包
+连接成功后会自动查询 ETH 余额和 NFT 合约
+如果找到 NFT，会显示提示信息
+Aptos 钱包连接：
+点击 "Connect Petra Wallet" 按钮连接 Aptos 钱包
+连接成功后会自动查询 APT 余额和 NFT 资源
+如果找到 NFT 资源或事件，会显示提示信息
+NFT 查询：
+连接钱包后会自动查询 NFT 合约
+使用环境变量中的合约地址（VITE_HERO_NFT_ADDRESS 或 VITE_MOVE_HERO_NFT_ADDRESS）
+如果找到 NFT，会在 Town 页面的 NFT 区域显示
+现在，当用户点击以太坊或 Aptos 连接按钮时，系统应该能够正确连接钱包并查询相应的 NFT 合约。
