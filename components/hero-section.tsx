@@ -11,12 +11,17 @@ import { useBlockchainWallet } from './blockchain-wallet'
 import { ETHEREUM_CONTRACTS } from '@/lib/constants'
 import { ethers } from 'ethers'
 
-// 简化版的 ERC721 ABI，只包含我们需要的函数
+// ERC721 ABI
 const ERC721_ABI = [
   'function balanceOf(address owner) view returns (uint256)',
   'function tokenOfOwnerByIndex(address owner, uint256 index) view returns (uint256)',
   'function tokenURI(uint256 tokenId) view returns (string)'
-];
+]
+
+// Hero ABI
+const HERO_ABI = [
+  'function getHeroInfo(address nftContract, uint256 tokenId) view returns (tuple(string name, uint8 race, uint8 gender, uint16 level, uint16 energy, uint16 dailyPoints))'
+]
 
 interface User {
   name?: string | null
@@ -79,14 +84,20 @@ export default function HeroSection({ user }: HeroSectionProps) {
   // 从区块链加载英雄数据
   const loadHeroFromBlockchain = async (address: string) => {
     try {
-      if (!window.ethereum) return;
+      if (!window.ethereum) {
+        console.log('MetaMask is not installed');
+        setIsLoading(false);
+        return;
+      }
       
       // 使用 window.ethereum 请求
       const provider = new ethers.providers.Web3Provider(window.ethereum as any);
+      const signer = provider.getSigner();
       
       // 检查合约地址是否有效
       if (!ETHEREUM_CONTRACTS.HERO_NFT_ADDRESS || ETHEREUM_CONTRACTS.HERO_NFT_ADDRESS === '0x0000000000000000000000000000000000000000') {
         console.error('Invalid NFT contract address');
+        toast.error('Invalid NFT contract address');
         setIsLoading(false);
         return;
       }
@@ -97,9 +108,28 @@ export default function HeroSection({ user }: HeroSectionProps) {
         console.log('Current network:', network.name, network.chainId);
       } catch (networkError) {
         console.error('Error checking network:', networkError);
+        toast.error('Error checking network');
+        setIsLoading(false);
+        return;
       }
       
       try {
+        // 检查合约是否存在
+        try {
+          const code = await provider.getCode(ETHEREUM_CONTRACTS.HERO_NFT_ADDRESS);
+          if (code === '0x') {
+            console.error('Contract does not exist at the specified address');
+            toast.error('NFT contract does not exist at the specified address');
+            setIsLoading(false);
+            return;
+          }
+        } catch (contractError) {
+          console.error('Error checking contract existence:', contractError);
+          toast.error('Error checking NFT contract existence');
+          setIsLoading(false);
+          return;
+        }
+        
         // 创建合约实例
         const nftContract = new ethers.Contract(
           ETHEREUM_CONTRACTS.HERO_NFT_ADDRESS,
@@ -107,18 +137,22 @@ export default function HeroSection({ user }: HeroSectionProps) {
           provider
         );
         
-        // 检查合约是否存在
-        try {
-          const code = await provider.getCode(ETHEREUM_CONTRACTS.HERO_NFT_ADDRESS);
-          if (code === '0x') {
-            console.error('Contract does not exist at the specified address');
-            setIsLoading(false);
-            return;
+        // 创建英雄合约实例 (如果有)
+        let heroContract: ethers.Contract | null = null;
+        if (ETHEREUM_CONTRACTS.HERO_ADDRESS) {
+          try {
+            const heroCode = await provider.getCode(ETHEREUM_CONTRACTS.HERO_ADDRESS);
+            if (heroCode !== '0x') {
+              heroContract = new ethers.Contract(
+                ETHEREUM_CONTRACTS.HERO_ADDRESS,
+                HERO_ABI,
+                signer
+              );
+              console.log('Hero contract initialized');
+            }
+          } catch (heroContractError) {
+            console.error('Error initializing hero contract:', heroContractError);
           }
-        } catch (contractError) {
-          console.error('Error checking contract existence:', contractError);
-          setIsLoading(false);
-          return;
         }
         
         // 检查用户是否拥有NFT
@@ -128,6 +162,18 @@ export default function HeroSection({ user }: HeroSectionProps) {
           console.log('NFT balance:', balance.toString());
         } catch (balanceError) {
           console.error('Error checking NFT balance:', balanceError);
+          toast.error('Error checking NFT balance');
+          
+          // 创建一个默认的英雄
+          const defaultHero: Hero = {
+            name: `Hero of ${address.substring(0, 6)}`,
+            points: 0,
+            level: 1,
+            userId: user.email || 'unknown',
+            createdAt: new Date().toISOString()
+          };
+          
+          setHero(defaultHero);
           setIsLoading(false);
           return;
         }
@@ -136,23 +182,75 @@ export default function HeroSection({ user }: HeroSectionProps) {
           // 获取用户的第一个NFT的tokenId
           let tokenId;
           try {
+            // 尝试使用 tokenOfOwnerByIndex 方法
             tokenId = await nftContract.tokenOfOwnerByIndex(address, 0);
             console.log('Token ID:', tokenId.toString());
           } catch (tokenError) {
             console.error('Error getting token ID:', tokenError);
             
-            // 创建一个默认的英雄，因为用户确实拥有NFT，但我们无法获取tokenId
-            const defaultHero: Hero = {
-              name: `Hero of ${address.substring(0, 6)}`,
-              points: 0,
-              level: 1,
-              userId: user.email || 'unknown',
-              createdAt: new Date().toISOString()
-            };
-            
-            setHero(defaultHero);
-            setIsLoading(false);
-            return;
+            // 尝试获取所有的 NFT 事件来确定 tokenId
+            try {
+              const transferEvents = await nftContract.queryFilter(
+                nftContract.filters.Transfer(null, address, null)
+              );
+              
+              if (transferEvents.length > 0) {
+                // 使用最近的转账事件
+                const latestEvent = transferEvents[transferEvents.length - 1];
+                tokenId = latestEvent.args?.tokenId;
+                console.log('Token ID from events:', tokenId.toString());
+              } else {
+                throw new Error('No transfer events found');
+              }
+            } catch (eventsError) {
+              console.error('Error getting token events:', eventsError);
+              
+              // 创建一个默认的英雄，因为用户确实拥有NFT，但我们无法获取tokenId
+              const defaultHero: Hero = {
+                name: `Hero of ${address.substring(0, 6)}`,
+                points: 0,
+                level: 1,
+                userId: user.email || 'unknown',
+                createdAt: new Date().toISOString()
+              };
+              
+              setHero(defaultHero);
+              setIsLoading(false);
+              return;
+            }
+          }
+          
+          // 如果有英雄合约，尝试获取英雄信息
+          if (heroContract) {
+            try {
+              const heroInfo = await (heroContract as any).getHeroInfo(ETHEREUM_CONTRACTS.HERO_NFT_ADDRESS, tokenId);
+              console.log('Hero info from contract:', heroInfo);
+              
+              // 创建基于合约数据的英雄
+              const contractHero: Hero = {
+                name: heroInfo.name || `Hero #${tokenId.toString()}`,
+                points: heroInfo.dailyPoints ? parseInt(heroInfo.dailyPoints.toString()) : 0,
+                level: heroInfo.level ? parseInt(heroInfo.level.toString()) : 1,
+                userId: user.email || 'unknown',
+                createdAt: new Date().toISOString(),
+                tokenId: tokenId.toString()
+              };
+              
+              setHero(contractHero);
+              
+              // 保存到API
+              try {
+                await saveHero(contractHero);
+              } catch (saveError) {
+                console.error('Error saving hero to API:', saveError);
+              }
+              
+              setIsLoading(false);
+              return;
+            } catch (heroInfoError) {
+              console.log('Hero info not found in contract, falling back to metadata:', heroInfoError);
+              // 继续使用元数据方法
+            }
           }
           
           // 获取NFT的元数据URI
@@ -174,6 +272,14 @@ export default function HeroSection({ user }: HeroSectionProps) {
             };
             
             setHero(tokenIdHero);
+            
+            // 保存到API
+            try {
+              await saveHero(tokenIdHero);
+            } catch (saveError) {
+              console.error('Error saving hero to API:', saveError);
+            }
+            
             setIsLoading(false);
             return;
           }
@@ -272,6 +378,28 @@ export default function HeroSection({ user }: HeroSectionProps) {
       setIsCreating(false)
     }
   }
+
+  // 保存英雄到API
+  const saveHero = async (hero: Hero) => {
+    try {
+      const response = await fetch('/api/heroes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(hero),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error saving hero:', error);
+      throw error;
+    }
+  };
 
   return (
     <Card className="h-64">

@@ -98,69 +98,88 @@ export default function PetraConnector({
   // 查询特定地址的代币余额
   const fetchTokenBalance = async () => {
     try {
-      // 使用特定地址查询余额
+      if (!aptosAddress) {
+        console.log('No wallet address available');
+        return '0';
+      }
+
+      // 使用 Aptos SDK 方法获取余额
       // 尝试使用多个网络端点，包括测试网和主网
       const endpoints = [
         // Testnet
-        `https://fullnode.testnet.aptoslabs.com/v1/accounts/${SPECIFIC_TOKEN_ADDRESS}/resources`,
+        'https://fullnode.testnet.aptoslabs.com/v1',
         // Mainnet
-        `https://fullnode.mainnet.aptoslabs.com/v1/accounts/${SPECIFIC_TOKEN_ADDRESS}/resources`,
-        // Devnet (如果适用)
-        `https://fullnode.devnet.aptoslabs.com/v1/accounts/${SPECIFIC_TOKEN_ADDRESS}/resources`
+        'https://fullnode.mainnet.aptoslabs.com/v1',
+        // Devnet
+        'https://fullnode.devnet.aptoslabs.com/v1'
       ];
       
-      let resources: any[] = [];
-      let responseOk = false;
+      let balance = '0';
+      let success = false;
       
       // 尝试所有端点，直到找到一个有效的
       for (const endpoint of endpoints) {
         try {
-          const response = await fetch(endpoint);
-          if (response.ok) {
-            resources = await response.json();
-            responseOk = true;
-            console.log(`Successfully connected to Aptos endpoint: ${endpoint}`);
-            break;
+          console.log(`Trying Aptos endpoint: ${endpoint} for address: ${aptosAddress}`);
+          
+          // 方法 1: 使用 SDK 的 getAccountResources 方法
+          const response = await fetch(`${endpoint}/accounts/${aptosAddress}/resources`);
+          
+          if (!response.ok) {
+            console.log(`Endpoint ${endpoint} returned status: ${response.status}`);
+            continue;
           }
+          
+          const resources = await response.json();
+          
+          if (!Array.isArray(resources)) {
+            console.log(`Endpoint ${endpoint} returned invalid data format`);
+            continue;
+          }
+          
+          // 对于原生APT代币
+          if (tokenAddress === '0x1::aptos_coin::AptosCoin') {
+            const aptCoinResource = resources.find((r) => 
+              r.type === '0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>'
+            );
+            
+            if (aptCoinResource?.data?.coin?.value) {
+              const balanceInApt = parseFloat(aptCoinResource.data.coin.value) / 10**8;
+              balance = balanceInApt.toFixed(4);
+              success = true;
+              console.log(`Successfully retrieved APT balance from ${endpoint}: ${balance}`);
+              break;
+            }
+          } else {
+            // 对于其他代币
+            const coinType = `0x1::coin::CoinStore<${tokenAddress}>`;
+            const resource = resources.find((r) => r.type === coinType);
+            
+            if (resource?.data?.coin?.value) {
+              const balanceInApt = parseFloat(resource.data.coin.value) / 10**8;
+              balance = balanceInApt.toFixed(4);
+              success = true;
+              console.log(`Successfully retrieved token balance from ${endpoint}: ${balance}`);
+              break;
+            }
+          }
+          
+          console.log(`No matching resource found in endpoint ${endpoint}`);
         } catch (endpointError) {
-          console.log(`Failed to connect to endpoint: ${endpoint}`, endpointError);
+          console.log(`Error connecting to endpoint: ${endpoint}`, endpointError);
           // 继续尝试下一个端点
         }
       }
       
-      // 如果所有端点都失败
-      if (!responseOk || !resources || !Array.isArray(resources)) {
-        console.error('All Aptos network endpoints failed');
+      if (!success) {
+        console.warn('All Aptos network endpoints failed or no matching resource found');
         return '0';
       }
       
-      // 对于原生APT代币
-      if (tokenAddress === '0x1::aptos_coin::AptosCoin') {
-        const aptCoinResource = resources.find((r: any) => 
-          r.type === '0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>'
-        );
-        
-        if (aptCoinResource && aptCoinResource.data && aptCoinResource.data.coin) {
-          const balanceInApt = parseFloat(aptCoinResource.data.coin.value) / 10**8;
-          return balanceInApt.toFixed(4);
-        } else {
-          return '0';
-        }
-      }
-      
-      // 对于其他代币
-      const coinType = `0x1::coin::CoinStore<${tokenAddress}>`;
-      const resource = resources.find((r: any) => r.type === coinType);
-      
-      if (resource && resource.data && resource.data.coin) {
-        const balanceInApt = parseFloat(resource.data.coin.value) / 10**8;
-        return balanceInApt.toFixed(4);
-      } else {
-        return '0';
-      }
+      return balance;
     } catch (error) {
       console.error('Error fetching token balance:', error);
-      return '0'; // 返回0而不是错误，避免UI显示错误
+      return '0';
     }
   };
 
