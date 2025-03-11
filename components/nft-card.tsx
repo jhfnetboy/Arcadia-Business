@@ -32,7 +32,6 @@ const NFTCard: React.FC<NFTCardProps> = ({
 
   return (
     <div>
-      <h3 className="text-sm font-medium mb-3">Your NFTs</h3>
       {ethereumAddress ? (
         <div className="text-xs text-gray-500 mb-2">
           Wallet: {ethereumAddress.slice(0, 6)}...{ethereumAddress.slice(-4)}
