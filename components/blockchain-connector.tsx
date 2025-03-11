@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 
 // 定义英雄数据类型
@@ -87,47 +86,41 @@ export default function BlockchainConnector({ heroData, onSaveComplete }: Blockc
   }
   
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Blockchain Connection</CardTitle>
-        <CardDescription>Save your hero data to the blockchain</CardDescription>
-      </CardHeader>
+    <div className="flex flex-col h-full bg-white rounded-lg shadow-md p-4">
+      <h3 className="text-lg font-semibold mb-2">Blockchain Connection</h3>
       
-      <CardContent>
-        {walletConnected ? (
-          <div className="space-y-2">
-            <p className="text-sm">Connected Wallet:</p>
-            <p className="text-xs font-mono bg-gray-100 p-2 rounded">
-              {walletAddress.substring(0, 6)}...{walletAddress.substring(walletAddress.length - 4)}
-            </p>
-            <p className="text-xs mt-2">
-              Hero: <strong>{heroData.name}</strong> (Level {heroData.level})
-            </p>
-          </div>
-        ) : (
-          <p className="text-sm">Connect your wallet to save your hero data to the blockchain and earn rewards.</p>
-        )}
-      </CardContent>
-      
-      <CardFooter>
-        {walletConnected ? (
+      <div className="flex flex-col space-y-2 flex-grow">
+        {!walletConnected ? (
           <Button 
-            className="w-full bg-green-600 hover:bg-green-700"
-            onClick={saveToBlockchain}
-            disabled={isSaving || !!heroData.txHash}
-          >
-            {isSaving ? 'Saving...' : heroData.txHash ? 'Already Saved' : 'Save to Blockchain'}
-          </Button>
-        ) : (
-          <Button 
-            className="w-full"
-            onClick={connectWallet}
+            onClick={connectWallet} 
             disabled={isSaving}
+            className="w-full"
           >
-            {isSaving ? 'Connecting...' : 'Connect Wallet'}
+            {isSaving ? 'Connecting...' : 'Connect MetaMask'}
           </Button>
+        ) : (
+          <>
+            <Button 
+              variant="outline" 
+              className="w-full bg-green-100 hover:bg-green-200 border-green-300 text-green-800"
+              onClick={() => {}}
+            >
+              <span className="flex items-center">
+                <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                Connected: {walletAddress.substring(0, 6)}...{walletAddress.substring(walletAddress.length - 4)}
+              </span>
+            </Button>
+            
+            <Button 
+              className="w-full bg-green-600 hover:bg-green-700"
+              onClick={saveToBlockchain}
+              disabled={isSaving || !!heroData.txHash}
+            >
+              {isSaving ? 'Saving...' : heroData.txHash ? 'Already Saved' : 'Save to Blockchain'}
+            </Button>
+          </>
         )}
-      </CardFooter>
-    </Card>
+      </div>
+    </div>
   )
 } 

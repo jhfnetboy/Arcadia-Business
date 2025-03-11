@@ -229,56 +229,54 @@ export default function PlayGameClient({ user }: PlayGameClientProps) {
           </div>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-2">Your Hero</h2>
-          <p className="mb-1"><strong>Name:</strong> {hero.name}</p>
-          <p className="mb-1"><strong>Points:</strong> {hero.points}</p>
-          <p className="mb-1"><strong>Level:</strong> {hero.level}</p>
-          {txHash && (
-            <p className="mb-4 text-sm text-green-600">
-              <strong>Blockchain TX:</strong> {txHash.substring(0, 10)}...
-            </p>
-          )}
-        </div>
-      )}
-      
-      {hero && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2">
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <div className="aspect-video w-full mb-4 relative">
-                <iframe
-                  id="game-iframe"
-                  src="/game/game-bridge.html"
-                  className="w-full h-full border-0 rounded"
-                  title="Arcadia Game"
-                  allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  onLoad={handleIframeLoad}
-                ></iframe>
-              </div>
-              <div className="bg-gray-100 p-4 rounded">
-                <h3 className="font-semibold mb-2">Game Instructions</h3>
-                <p>Play the game and earn points. Use the "Save Game" button in the top-right corner to save your progress.</p>
-                <p className="text-sm text-gray-500 mt-2">Note: This game uses the Godot engine and may take a moment to load.</p>
-              </div>
-            </div>
+        <div className="flex flex-wrap gap-4 mb-4">
+          {/* 英雄信息 */}
+          <div className="bg-white rounded-lg shadow-md p-4 flex-1 h-32">
+            <h2 className="text-lg font-semibold mb-1">Your Hero</h2>
+            <p className="text-sm mb-1"><strong>Name:</strong> {hero.name}</p>
+            <p className="text-sm mb-1"><strong>Points:</strong> {hero.points}</p>
+            <p className="text-sm mb-1"><strong>Level:</strong> {hero.level}</p>
+            {txHash && (
+              <p className="text-xs text-green-600">
+                <strong>TX:</strong> {txHash.substring(0, 10)}...
+              </p>
+            )}
           </div>
           
-          <div className="md:col-span-1">
+          {/* 区块链连接 */}
+          <div className="flex-1 h-32">
             <BlockchainConnector 
               heroData={hero} 
               onSaveComplete={handleBlockchainSaveComplete} 
             />
-            
-            <div className="bg-white rounded-lg shadow-md p-4 mt-6">
-              <h3 className="font-semibold mb-2">Game Stats</h3>
-              <p className="text-sm mb-1">Points: {hero.points}</p>
-              <p className="text-sm mb-1">Level: {hero.level}</p>
-              <p className="text-sm mb-1">Created: {new Date(hero.createdAt).toLocaleString()}</p>
-              <p className="text-xs text-gray-500 mt-2">
-                Save your progress regularly to earn rewards!
-              </p>
+          </div>
+          
+          {/* 游戏统计 */}
+          <div className="bg-white rounded-lg shadow-md p-4 flex-1 h-32">
+            <h3 className="text-lg font-semibold mb-1">Game Stats</h3>
+            <p className="text-sm mb-1">Points: {hero.points}</p>
+            <p className="text-sm mb-1">Level: {hero.level}</p>
+            <p className="text-sm mb-1">Created: {new Date(hero.createdAt).toLocaleString()}</p>
+            <p className="text-xs text-gray-500 mt-1">
+              Save progress to earn rewards!
+            </p>
+          </div>
+        </div>
+      )}
+      
+      {hero && (
+        <div className="w-full">
+          <div className="bg-white rounded-lg shadow-md p-4">
+            <div className="aspect-video w-full relative h-[calc(100vh-300px)]">
+              <iframe
+                id="game-iframe"
+                src="/game/game-bridge.html"
+                className="w-full h-full border-0 rounded"
+                title="Arcadia Game"
+                allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                onLoad={handleIframeLoad}
+              ></iframe>
             </div>
           </div>
         </div>
