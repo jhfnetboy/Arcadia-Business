@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
-import BlockchainConnector from '@/components/blockchain-connector'
 import { Maximize2, Minimize2 } from 'lucide-react'
+import BlockchainWallet from '@/components/blockchain-wallet'
+import { useBlockchainWallet } from '@/components/blockchain-wallet'
 
 // 定义英雄数据类型
 interface Hero {
@@ -40,6 +41,7 @@ export default function PlayGameClient({ user }: PlayGameClientProps) {
   const [gameLoaded, setGameLoaded] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const gameContainerRef = useRef<HTMLDivElement>(null)
+  const { ethereumAddress, aptosAddress } = useBlockchainWallet();
 
   // 初始化默认英雄数据
   useEffect(() => {
@@ -291,11 +293,8 @@ export default function PlayGameClient({ user }: PlayGameClientProps) {
           </div>
           
           {/* 区块链连接 */}
-          <div className="flex-1 h-32">
-            <BlockchainConnector 
-              heroData={hero} 
-              onSaveComplete={handleBlockchainSaveComplete} 
-            />
+          <div className="flex-1 h-32 bg-white rounded-lg shadow-md p-4">
+            <BlockchainWallet />
           </div>
           
           {/* 游戏统计 */}
@@ -325,11 +324,11 @@ export default function PlayGameClient({ user }: PlayGameClientProps) {
                 {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
               </Button>
             </div>
-            <div className="aspect-video w-full relative h-[calc(100vh-250px)]">
+            <div className={`aspect-video w-full relative h-[calc(100vh-250px)] ${isFullscreen ? 'flex items-center justify-center' : ''}`}>
               <iframe
                 id="game-iframe"
                 src="/game/game-bridge.html"
-                className="w-full h-full border-0 rounded"
+                className={`${isFullscreen ? 'w-full h-full max-h-screen' : 'w-full h-full'} border-0 rounded`}
                 title="Arcadia Game"
                 allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen

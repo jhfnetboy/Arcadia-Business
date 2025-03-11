@@ -41,6 +41,7 @@
     "@vercel/kv": "^1.0.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "ethers": "5.7.2",
     "jest-environment-jsdom": "^29.7.0",
     "lucide-react": "^0.274.0",
     "next": "^15.2.1",

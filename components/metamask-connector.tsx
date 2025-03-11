@@ -1,72 +1,21 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
+import { useBlockchainWallet } from './blockchain-wallet'
 
 interface MetamaskConnectorProps {
   tokenContractAddress: string
   tokenSymbol?: string
 }
 
-// 为 window.ethereum 添加类型定义
-interface Ethereum {
-  request: (args: any) => Promise<any>
-  on: (event: string, callback: any) => void
-  removeListener: (event: string, callback: any) => void
-  selectedAddress?: string
-  isConnected?: () => boolean
-}
-
-// 扩展 Window 接口
-declare global {
-  interface Window {
-    ethereum?: Ethereum
-  }
-}
-
 export default function MetamaskConnector({ 
   tokenContractAddress, 
   tokenSymbol = 'HERO' 
 }: MetamaskConnectorProps) {
-  const [address, setAddress] = useState<string | null>(null)
-  const [balance, setBalance] = useState<string | null>(null)
   const [isConnecting, setIsConnecting] = useState(false)
-
-  // 检查是否已连接
-  useEffect(() => {
-    const checkConnection = async () => {
-      if (window.ethereum && window.ethereum.selectedAddress) {
-        setAddress(window.ethereum.selectedAddress)
-        await fetchBalance(window.ethereum.selectedAddress)
-      }
-    }
-
-    checkConnection()
-  }, [])
-
-  // 监听账户变化
-  useEffect(() => {
-    if (!window.ethereum) return
-
-    const handleAccountsChanged = (accounts: string[]) => {
-      if (accounts.length === 0) {
-        setAddress(null)
-        setBalance(null)
-      } else {
-        setAddress(accounts[0])
-        fetchBalance(accounts[0])
-      }
-    }
-
-    window.ethereum.on('accountsChanged', handleAccountsChanged)
-
-    return () => {
-      if (window.ethereum) {
-        window.ethereum.removeListener('accountsChanged', handleAccountsChanged)
-      }
-    }
-  }, [])
+  const { ethereumAddress, ethereumBalance, updateEthereumBalance } = useBlockchainWallet();
 
   // 连接MetaMask
   const connectWallet = async () => {
@@ -79,8 +28,10 @@ export default function MetamaskConnector({
 
     try {
       const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
-      setAddress(accounts[0])
-      await fetchBalance(accounts[0])
+      const balance = await fetchBalance(accounts[0])
+      if (balance) {
+        updateEthereumBalance(balance)
+      }
       toast.success('MetaMask connected successfully!')
     } catch (error) {
       console.error('Error connecting to MetaMask:', error)
@@ -92,14 +43,12 @@ export default function MetamaskConnector({
 
   // 断开连接
   const disconnectWallet = () => {
-    setAddress(null)
-    setBalance(null)
     toast.info('MetaMask disconnected')
   }
 
   // 查询代币余额
   const fetchBalance = async (walletAddress: string) => {
-    if (!tokenContractAddress || !walletAddress || !window.ethereum) return
+    if (!tokenContractAddress || !walletAddress || !window.ethereum) return null
 
     try {
       // ERC20 balanceOf 函数的 ABI 编码
@@ -122,16 +71,16 @@ export default function MetamaskConnector({
       // 假设代币有18位小数（如ETH）
       const balanceInEther = parseFloat(balanceInWei) / 10**18
       
-      setBalance(balanceInEther.toFixed(4))
+      return balanceInEther.toFixed(4)
     } catch (error) {
       console.error('Error fetching token balance:', error)
-      setBalance('Error')
+      return 'Error'
     }
   }
 
   return (
     <div className="flex flex-col space-y-2">
-      {!address ? (
+      {!ethereumAddress ? (
         <Button 
           onClick={connectWallet} 
           disabled={isConnecting}
@@ -148,13 +97,13 @@ export default function MetamaskConnector({
           >
             <span className="flex items-center">
               <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-              Connected: {address.substring(0, 6)}...{address.substring(address.length - 4)}
+              Connected: {ethereumAddress.substring(0, 6)}...{ethereumAddress.substring(ethereumAddress.length - 4)}
             </span>
           </Button>
           
-          {balance && (
+          {ethereumBalance && (
             <div className="text-sm text-center">
-              Balance: {balance} {tokenSymbol}
+              Balance: {ethereumBalance} {tokenSymbol}
             </div>
           )}
         </>

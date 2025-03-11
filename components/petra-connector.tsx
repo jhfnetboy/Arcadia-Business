@@ -1,57 +1,27 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
+import { useBlockchainWallet } from './blockchain-wallet'
 
 interface PetraConnectorProps {
   tokenAddress: string
   tokenSymbol?: string
 }
 
-// 为 Aptos Wallet Standard 添加类型定义
-interface AptosWallet {
-  name: string
-  icon: string
-  connect: () => Promise<{ address: string }>
-  disconnect: () => Promise<void>
-  network: () => Promise<string>
-  signAndSubmitTransaction: (transaction: any) => Promise<any>
-  signTransaction: (transaction: any) => Promise<any>
-  signMessage: (message: any) => Promise<any>
-  isConnected: () => Promise<boolean>
-  account: () => Promise<{ address: string }>
-}
-
-interface AptosWalletStandard {
-  connect: (options?: { onlyIfTrusted?: boolean }) => Promise<{ address: string }>
-  disconnect: () => Promise<void>
-  isConnected: () => Promise<boolean>
-  account: () => Promise<{ address: string }>
-  network: () => Promise<{ name: string }>
-  signAndSubmitTransaction: (transaction: any) => Promise<any>
-  signTransaction: (transaction: any) => Promise<any>
-  signMessage: (message: any) => Promise<any>
-}
-
-// 扩展 Window 接口
-declare global {
-  interface Window {
-    aptos?: AptosWalletStandard
-    aptosWallets?: AptosWallet[]
-  }
-}
+// 特定的代币地址
+const SPECIFIC_TOKEN_ADDRESS = '0x53f7e4ab7f52b7030d5a53f343eb37c64d9a36838c5e545542e21dc7b8b4bfd8';
 
 export default function PetraConnector({ 
   tokenAddress, 
   tokenSymbol = 'APT' 
 }: PetraConnectorProps) {
-  const [address, setAddress] = useState<string | null>(null)
-  const [balance, setBalance] = useState<string | null>(null)
   const [isConnecting, setIsConnecting] = useState(false)
+  const { aptosAddress, aptosBalance, updateAptosBalance } = useBlockchainWallet();
 
   // 获取Petra钱包
-  const getPetraWallet = (): AptosWallet | undefined => {
+  const getPetraWallet = () => {
     if (typeof window === 'undefined') return undefined;
     
     // 使用Aptos Wallet Standard API
@@ -61,82 +31,6 @@ export default function PetraConnector({
     
     return undefined;
   };
-
-  // 检查是否已连接
-  useEffect(() => {
-    const checkConnection = async () => {
-      if (typeof window === 'undefined') return;
-      
-      try {
-        const petraWallet = getPetraWallet();
-        
-        if (petraWallet) {
-          const isConnected = await petraWallet.isConnected();
-          if (isConnected) {
-            const account = await petraWallet.account();
-            setAddress(account.address);
-            await fetchBalance(account.address);
-          }
-        } else if (window.aptos) {
-          // 回退到旧API
-          const isConnected = await window.aptos.isConnected();
-          if (isConnected) {
-            const account = await window.aptos.account();
-            setAddress(account.address);
-            await fetchBalance(account.address);
-          }
-        }
-      } catch (error) {
-        console.error('Error checking Petra connection:', error);
-      }
-    };
-
-    checkConnection();
-  }, []);
-
-  // 监听账户变化
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const handleAccountChange = async () => {
-      try {
-        const petraWallet = getPetraWallet();
-        
-        if (petraWallet) {
-          const isConnected = await petraWallet.isConnected();
-          if (isConnected) {
-            const account = await petraWallet.account();
-            setAddress(account.address);
-            await fetchBalance(account.address);
-          } else {
-            setAddress(null);
-            setBalance(null);
-          }
-        } else if (window.aptos) {
-          // 回退到旧API
-          const isConnected = await window.aptos.isConnected();
-          if (isConnected) {
-            const account = await window.aptos.account();
-            setAddress(account.address);
-            await fetchBalance(account.address);
-          } else {
-            setAddress(null);
-            setBalance(null);
-          }
-        }
-      } catch (error) {
-        console.error('Error handling account change:', error);
-      }
-    };
-
-    // Petra 钱包目前不支持直接的账户变化事件
-    // 这里使用轮询作为替代方案
-    const intervalId = setInterval(handleAccountChange, 5000);
-
-    return () => {
-      clearInterval(intervalId);
-    };
-  }, []);
 
   // 连接 Petra 钱包
   const connectWallet = async () => {
@@ -158,15 +52,18 @@ export default function PetraConnector({
     try {
       if (petraWallet) {
         // 使用新的Wallet Standard API
-        const account = await petraWallet.connect();
-        setAddress(account.address);
-        await fetchBalance(account.address);
+        await petraWallet.connect();
+        const balance = await fetchTokenBalance();
+        if (balance) {
+          updateAptosBalance(balance);
+        }
       } else if (window.aptos) {
         // 回退到旧API
         await window.aptos.connect();
-        const account = await window.aptos.account();
-        setAddress(account.address);
-        await fetchBalance(account.address);
+        const balance = await fetchTokenBalance();
+        if (balance) {
+          updateAptosBalance(balance);
+        }
       }
       
       toast.success('Petra wallet connected successfully!');
@@ -191,8 +88,6 @@ export default function PetraConnector({
         await window.aptos.disconnect();
       }
       
-      setAddress(null);
-      setBalance(null);
       toast.info('Petra wallet disconnected');
     } catch (error) {
       console.error('Error disconnecting from Petra wallet:', error);
@@ -200,13 +95,16 @@ export default function PetraConnector({
     }
   };
 
-  // 查询代币余额
-  const fetchBalance = async (walletAddress: string) => {
-    if (!tokenAddress || !walletAddress || typeof window === 'undefined') return;
-
+  // 查询特定地址的代币余额
+  const fetchTokenBalance = async () => {
     try {
-      // 使用Aptos API获取余额
-      const response = await fetch(`https://fullnode.mainnet.aptoslabs.com/v1/accounts/${walletAddress}/resources`);
+      // 使用特定地址查询余额
+      const response = await fetch(`https://fullnode.mainnet.aptoslabs.com/v1/accounts/${SPECIFIC_TOKEN_ADDRESS}/resources`);
+      
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+      
       const resources = await response.json();
       
       // 对于原生APT代币
@@ -217,11 +115,10 @@ export default function PetraConnector({
         
         if (aptCoinResource && aptCoinResource.data && aptCoinResource.data.coin) {
           const balanceInApt = parseFloat(aptCoinResource.data.coin.value) / 10**8;
-          setBalance(balanceInApt.toFixed(4));
+          return balanceInApt.toFixed(4);
         } else {
-          setBalance('0');
+          return '0';
         }
-        return;
       }
       
       // 对于其他代币
@@ -230,19 +127,19 @@ export default function PetraConnector({
       
       if (resource && resource.data && resource.data.coin) {
         const balanceInApt = parseFloat(resource.data.coin.value) / 10**8;
-        setBalance(balanceInApt.toFixed(4));
+        return balanceInApt.toFixed(4);
       } else {
-        setBalance('0');
+        return '0';
       }
     } catch (error) {
       console.error('Error fetching token balance:', error);
-      setBalance('Error');
+      return 'Error';
     }
   };
 
   return (
     <div className="flex flex-col space-y-2">
-      {!address ? (
+      {!aptosAddress ? (
         <Button 
           onClick={connectWallet} 
           disabled={isConnecting}
@@ -259,13 +156,13 @@ export default function PetraConnector({
           >
             <span className="flex items-center">
               <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-              Connected: {address.substring(0, 6)}...{address.substring(address.length - 4)}
+              Connected: {aptosAddress.substring(0, 6)}...{aptosAddress.substring(aptosAddress.length - 4)}
             </span>
           </Button>
           
-          {balance && (
+          {aptosBalance && (
             <div className="text-sm text-center">
-              Balance: {balance} {tokenSymbol}
+              Balance: {aptosBalance} {tokenSymbol}
             </div>
           )}
         </>
