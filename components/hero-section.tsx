@@ -76,196 +76,113 @@ export default function HeroSection({ user }: HeroSectionProps) {
       if (!ethereumAddress || currentNetwork !== 'ethereum') return;
       
       setIsLoading(true);
+      addDebugInfo(`Loading NFTs for wallet address: ${ethereumAddress}`);
+      
       try {
-        console.log('Loading NFTs for address:', ethereumAddress);
+        // 初始化 provider 和 signer
         const provider = new ethers.providers.Web3Provider(window.ethereum as any);
+        const signer = provider.getSigner();
+        const network = await provider.getNetwork();
+        
+        addDebugInfo(`Connected to network: ${network.name} (chainId: ${network.chainId})`);
         
         // 检查合约地址是否有效
         if (!ETHEREUM_CONTRACTS.HERO_NFT_ADDRESS) {
-          console.error('Invalid NFT contract address');
-          toast.error('Invalid NFT contract address');
+          const error = 'Invalid NFT contract address';
+          console.error(error);
+          addDebugInfo(error);
+          setIsLoading(false);
           return;
         }
         
-        console.log('Using NFT contract address:', ETHEREUM_CONTRACTS.HERO_NFT_ADDRESS);
-        
-        // 创建合约实例
+        // 创建 NFT 合约实例
         const nftContract = new ethers.Contract(
           ETHEREUM_CONTRACTS.HERO_NFT_ADDRESS,
           ERC721_ABI,
-          provider
+          signer
         );
         
-        // 获取用户的 NFT 数量
-        let balance;
+        addDebugInfo(`NFT contract initialized at address: ${ETHEREUM_CONTRACTS.HERO_NFT_ADDRESS}`);
+        
         try {
-          balance = await nftContract.balanceOf(ethereumAddress);
-          console.log('NFT balance:', balance.toString());
-        } catch (balanceError) {
-          console.error('Error checking NFT balance:', balanceError);
-          toast.error('Error checking NFT balance');
-          setIsLoading(false);
-          return;
-        }
-        
-        // 如果用户没有 NFT，直接返回
-        if (balance.toNumber() === 0) {
-          console.log('User has no NFTs');
-          setIsLoading(false);
-          return;
-        }
-        
-        // 获取所有的 NFT
-        const userNfts: NFT[] = [];
-        
-        // 方法 1: 尝试使用 tokenOfOwnerByIndex (ERC721Enumerable)
-        let useEnumerable = true;
-        
-        // 先尝试获取第一个 token 来检查是否支持 ERC721Enumerable
-        try {
-          await nftContract.tokenOfOwnerByIndex(ethereumAddress, 0);
+          // 获取用户拥有的 NFT 数量
+          const balance = await nftContract.balanceOf(ethereumAddress);
+          const balanceNumber = balance.toNumber();
+          
+          addDebugInfo(`User has ${balanceNumber} NFTs`);
+          
+          if (balanceNumber === 0) {
+            setNfts([]);
+            setIsLoading(false);
+            return;
+          }
+          
+          // 获取用户拥有的所有 NFT
+          const tokenIds = new Set<string>();
+          const nftPromises: Promise<NFT | null>[] = [];
+          
+          for (let i = 0; i < balanceNumber; i++) {
+            nftPromises.push(
+              (async () => {
+                try {
+                  const tokenId = await nftContract.tokenOfOwnerByIndex(ethereumAddress, i);
+                  const tokenIdStr = tokenId.toString();
+                  
+                  if (!tokenIds.has(tokenIdStr)) {
+                    tokenIds.add(tokenIdStr);
+                    
+                    // 获取 NFT 的元数据 URI
+                    const tokenURI = await nftContract.tokenURI(tokenId);
+                    addDebugInfo(`Token #${tokenIdStr} URI: ${tokenURI}`);
+                    
+                    // 获取元数据
+                    let metadata = null;
+                    try {
+                      const metadataUrl = tokenURI.startsWith('ipfs://')
+                        ? tokenURI.replace('ipfs://', 'https://ipfs.io/ipfs/')
+                        : tokenURI;
+                      
+                      const metadataResponse = await fetch(metadataUrl);
+                      if (metadataResponse.ok) {
+                        metadata = await metadataResponse.json();
+                        addDebugInfo(`Token #${tokenIdStr} metadata loaded successfully`);
+                      } else {
+                        addDebugInfo(`Failed to load metadata for token #${tokenIdStr}: ${metadataResponse.status}`);
+                      }
+                    } catch (metadataError) {
+                      console.error('Error fetching metadata:', metadataError);
+                      addDebugInfo(`Error fetching metadata for token #${tokenIdStr}: ${metadataError instanceof Error ? metadataError.message : String(metadataError)}`);
+                    }
+                    
+                    return {
+                      tokenId: tokenIdStr,
+                      tokenURI,
+                      metadata
+                    } as NFT;
+                  }
+                  return null;
+                } catch (error) {
+                  console.error(`Error fetching token at index ${i}:`, error);
+                  addDebugInfo(`Error fetching token at index ${i}: ${error instanceof Error ? error.message : String(error)}`);
+                  return null;
+                }
+              })()
+            );
+          }
+          
+          const results = await Promise.all(nftPromises);
+          const validNfts = results.filter(Boolean) as NFT[];
+          
+          addDebugInfo(`Successfully loaded ${validNfts.length} NFTs`);
+          setNfts(validNfts);
+          
         } catch (error) {
-          console.log('Contract does not support ERC721Enumerable, using alternative method');
-          useEnumerable = false;
+          console.error('Error loading NFTs:', error);
+          addDebugInfo(`Error loading NFTs: ${error instanceof Error ? error.message : String(error)}`);
         }
-        
-        if (useEnumerable) {
-          // 使用 ERC721Enumerable 接口
-          for (let i = 0; i < balance.toNumber(); i++) {
-            try {
-              const tokenId = await nftContract.tokenOfOwnerByIndex(ethereumAddress, i);
-              console.log('Found token ID:', tokenId.toString());
-              
-              let tokenURI;
-              let metadata = null;
-              try {
-                tokenURI = await nftContract.tokenURI(tokenId);
-                console.log('Token URI:', tokenURI);
-                
-                // 获取元数据
-                if (tokenURI) {
-                  try {
-                    // 如果是 IPFS URI，转换为 HTTP URL
-                    const url = tokenURI.startsWith('ipfs://') 
-                      ? tokenURI.replace('ipfs://', 'https://ipfs.io/ipfs/') 
-                      : tokenURI;
-                    
-                    const response = await fetch(url);
-                    if (response.ok) {
-                      metadata = await response.json();
-                      console.log('NFT Metadata:', metadata);
-                    }
-                  } catch (metadataError) {
-                    console.error('Error fetching metadata:', metadataError);
-                  }
-                }
-              } catch (uriError) {
-                console.error('Error getting token URI:', uriError);
-              }
-              
-              userNfts.push({
-                tokenId: tokenId.toString(),
-                tokenURI,
-                metadata
-              });
-            } catch (error) {
-              console.error('Error getting token ID at index', i, ':', error);
-              continue;
-            }
-          }
-        } else {
-          // 方法 2: 使用 Transfer 事件查询
-          try {
-            console.log('Trying to get NFTs using Transfer events');
-            
-            // 创建一个过滤器，查找转移到用户地址的事件
-            const filter = nftContract.filters.Transfer(null, ethereumAddress, null);
-            
-            // 查询过去的事件
-            const events = await nftContract.queryFilter(filter);
-            console.log('Found Transfer events:', events.length);
-            
-            // 创建一个 Set 来存储唯一的 tokenId
-            const tokenIds = new Set<string>();
-            
-            // 处理事件
-            for (const event of events) {
-              const tokenId = event.args?.tokenId.toString();
-              
-              // 检查这个 token 是否仍然属于用户
-              try {
-                const owner = await nftContract.ownerOf(tokenId);
-                if (owner.toLowerCase() === ethereumAddress.toLowerCase()) {
-                  tokenIds.add(tokenId);
-                }
-              } catch (ownerError) {
-                console.error('Error checking owner of token', tokenId, ':', ownerError);
-              }
-            }
-            
-            console.log('Unique token IDs owned by user:', Array.from(tokenIds));
-            
-            // 获取每个 token 的元数据
-            for (const tokenId of Array.from(tokenIds)) {
-              let tokenURI;
-              let metadata = null;
-              
-              try {
-                tokenURI = await nftContract.tokenURI(tokenId);
-                console.log('Token URI for', tokenId, ':', tokenURI);
-                
-                // 获取元数据
-                if (tokenURI) {
-                  try {
-                    // 如果是 IPFS URI，转换为 HTTP URL
-                    const url = tokenURI.startsWith('ipfs://') 
-                      ? tokenURI.replace('ipfs://', 'https://ipfs.io/ipfs/') 
-                      : tokenURI;
-                    
-                    const response = await fetch(url);
-                    if (response.ok) {
-                      metadata = await response.json();
-                      console.log('NFT Metadata for', tokenId, ':', metadata);
-                    }
-                  } catch (metadataError) {
-                    console.error('Error fetching metadata for token', tokenId, ':', metadataError);
-                  }
-                }
-              } catch (uriError) {
-                console.error('Error getting token URI for token', tokenId, ':', uriError);
-              }
-              
-              userNfts.push({
-                tokenId,
-                tokenURI,
-                metadata
-              });
-            }
-          } catch (eventsError) {
-            console.error('Error getting Transfer events:', eventsError);
-            
-            // 方法 3: 如果前两种方法都失败，创建一些模拟的 NFT 数据用于测试
-            if (userNfts.length === 0) {
-              console.log('Using fallback method to create sample NFTs');
-              for (let i = 0; i < balance.toNumber(); i++) {
-                userNfts.push({
-                  tokenId: `${i}`,  // 修改为数字字符串，而不是 sample-${i}
-                  metadata: {
-                    name: `Sample NFT #${i}`,
-                    description: 'This is a sample NFT created when other methods failed',
-                    image: 'https://placehold.co/400x400?text=Sample+NFT'
-                  }
-                });
-              }
-            }
-          }
-        }
-        
-        console.log('Final NFT list:', userNfts);
-        setNfts(userNfts);
       } catch (error) {
-        console.error('Error loading NFTs:', error);
-        toast.error('Error loading NFTs');
+        console.error('Error initializing NFT contract:', error);
+        addDebugInfo(`Error initializing NFT contract: ${error instanceof Error ? error.message : String(error)}`);
       } finally {
         setIsLoading(false);
       }
@@ -308,10 +225,25 @@ export default function HeroSection({ user }: HeroSectionProps) {
         // 初始化 provider 和 signer
         const provider = new ethers.providers.Web3Provider(window.ethereum as any);
         const signer = provider.getSigner();
+        const network = await provider.getNetwork();
         
-        addDebugInfo('Initializing hero contract...');
+        addDebugInfo(`Connected to network for hero contract: ${network.name} (chainId: ${network.chainId})`);
         
         try {
+          // 检查合约是否存在
+          const code = await provider.getCode(ETHEREUM_CONTRACTS.HERO_ADDRESS);
+          if (code === '0x') {
+            const error = `Hero contract does not exist at address: ${ETHEREUM_CONTRACTS.HERO_ADDRESS}`;
+            console.error(error);
+            addDebugInfo(error);
+            setContractError(error);
+            setHeroNotFound(true);
+            setIsLoading(false);
+            return;
+          }
+          
+          addDebugInfo(`Hero contract exists at address: ${ETHEREUM_CONTRACTS.HERO_ADDRESS}`);
+          
           // 创建合约实例
           const heroContract = new ethers.Contract(
             ETHEREUM_CONTRACTS.HERO_ADDRESS,
@@ -325,30 +257,76 @@ export default function HeroSection({ user }: HeroSectionProps) {
           try {
             addDebugInfo(`Calling getHeroInfo with params: ${ETHEREUM_CONTRACTS.HERO_NFT_ADDRESS}, ${selectedNft.tokenId}`);
             
-            const heroInfo = await heroContract.getHeroInfo(
-              ETHEREUM_CONTRACTS.HERO_NFT_ADDRESS,
-              selectedNft.tokenId
+            // 检查 ABI 中是否有 getHeroInfo 方法
+            const hasGetHeroInfo = HERO_ABI.some((item: any) => 
+              item.type === 'function' && item.name === 'getHeroInfo'
             );
             
-            addDebugInfo(`Hero info retrieved: ${JSON.stringify(heroInfo)}`);
+            if (!hasGetHeroInfo) {
+              const error = 'getHeroInfo method not found in contract ABI';
+              console.error(error);
+              addDebugInfo(error);
+              setContractError(error);
+              setHeroNotFound(true);
+              setIsLoading(false);
+              return;
+            }
             
-            // 创建英雄对象
-            const newHero: Hero = {
-              name: heroInfo.name || `Hero #${selectedNft.tokenId}`,
-              points: heroInfo.dailyPoints ? parseInt(heroInfo.dailyPoints.toString()) : 0,
-              level: heroInfo.level ? parseInt(heroInfo.level.toString()) : 1,
-              userId: user.email || 'unknown',
-              createdAt: new Date().toISOString(),
-              tokenId: selectedNft.tokenId
-            };
+            addDebugInfo('getHeroInfo method found in ABI');
             
-            setHero(newHero);
-            setHeroNotFound(false);
-            
-          } catch (contractError) {
-            console.error('Error getting hero from contract:', contractError);
-            addDebugInfo(`Error getting hero from contract: ${contractError instanceof Error ? contractError.message : String(contractError)}`);
-            setContractError(`Hero not found in contract: ${contractError instanceof Error ? contractError.message : String(contractError)}`);
+            // 尝试直接调用合约方法
+            try {
+              const heroInfo = await heroContract.getHeroInfo(
+                ETHEREUM_CONTRACTS.HERO_NFT_ADDRESS,
+                selectedNft.tokenId
+              );
+              
+              addDebugInfo(`Hero info retrieved: ${JSON.stringify(heroInfo)}`);
+              
+              // 创建英雄对象
+              const newHero: Hero = {
+                name: heroInfo.name || `Hero #${selectedNft.tokenId}`,
+                points: heroInfo.dailyPoints ? parseInt(heroInfo.dailyPoints.toString()) : 0,
+                level: heroInfo.level ? parseInt(heroInfo.level.toString()) : 1,
+                userId: user.email || 'unknown',
+                createdAt: new Date().toISOString(),
+                tokenId: selectedNft.tokenId
+              };
+              
+              setHero(newHero);
+              setHeroNotFound(false);
+              
+            } catch (contractError) {
+              console.error('Error getting hero from contract:', contractError);
+              addDebugInfo(`Error getting hero from contract: ${contractError instanceof Error ? contractError.message : String(contractError)}`);
+              
+              // 尝试解析错误数据
+              if (contractError instanceof Error) {
+                const errorData = (contractError as any).data;
+                if (errorData) {
+                  addDebugInfo(`Error data: ${errorData}`);
+                  
+                  // 尝试解析返回的数据
+                  try {
+                    // 如果数据以 0x 开头，可能是十六进制编码的数据
+                    if (typeof errorData === 'string' && errorData.startsWith('0x')) {
+                      // 尝试解码数据
+                      const decodedData = ethers.utils.toUtf8String(errorData);
+                      addDebugInfo(`Decoded error data: ${decodedData}`);
+                    }
+                  } catch (decodeError) {
+                    addDebugInfo(`Failed to decode error data: ${decodeError instanceof Error ? decodeError.message : String(decodeError)}`);
+                  }
+                }
+              }
+              
+              setContractError(`Hero not found in contract: ${contractError instanceof Error ? contractError.message : String(contractError)}`);
+              setHeroNotFound(true);
+            }
+          } catch (error) {
+            console.error('Error calling getHeroInfo:', error);
+            addDebugInfo(`Error calling getHeroInfo: ${error instanceof Error ? error.message : String(error)}`);
+            setContractError(`Error calling getHeroInfo: ${error instanceof Error ? error.message : String(error)}`);
             setHeroNotFound(true);
           }
         } catch (error) {
@@ -433,70 +411,73 @@ export default function HeroSection({ user }: HeroSectionProps) {
         </CardHeader>
         
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* 左侧：NFT 列表 */}
-            <div>
+            <div className="md:col-span-1">
               <h3 className="text-sm font-medium mb-3">Your NFTs</h3>
+              {ethereumAddress ? (
+                <div className="text-xs text-gray-500 mb-2">
+                  Wallet: {ethereumAddress.slice(0, 6)}...{ethereumAddress.slice(-4)}
+                </div>
+              ) : (
+                <div className="text-xs text-gray-500 mb-2">
+                  Wallet not connected
+                </div>
+              )}
+              
               {isLoading && !nfts.length ? (
                 <div className="flex items-center justify-center h-24">
                   <p>Loading NFTs...</p>
                 </div>
               ) : nfts.length > 0 ? (
-                <div className="grid grid-cols-2 gap-4">
-                  {nfts.map((nft) => (
-                    <div 
-                      key={nft.tokenId}
-                      onClick={() => setSelectedNft(nft)}
-                      className={`border rounded-lg p-3 cursor-pointer transition-all ${
-                        selectedNft?.tokenId === nft.tokenId 
-                          ? 'border-blue-500 bg-blue-50' 
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      {/* NFT 图像 */}
-                      {nft.metadata?.image ? (
-                        <div className="aspect-square w-full mb-2 overflow-hidden rounded-md">
-                          <img 
-                            src={nft.metadata.image.startsWith('ipfs://') 
-                              ? nft.metadata.image.replace('ipfs://', 'https://ipfs.io/ipfs/') 
-                              : nft.metadata.image
-                            } 
-                            alt={`NFT #${nft.tokenId}`}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src = 'https://placehold.co/200x200?text=NFT';
-                            }}
-                          />
-                        </div>
-                      ) : (
-                        <div className="aspect-square w-full mb-2 bg-gray-100 flex items-center justify-center rounded-md">
-                          <span className="text-gray-500">NFT #{nft.tokenId}</span>
-                        </div>
-                      )}
-                      
-                      {/* NFT 信息 */}
-                      <div className="space-y-1">
-                        <p className="font-medium text-sm truncate">
-                          {nft.metadata?.name || `NFT #${nft.tokenId}`}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          Token ID: {nft.tokenId}
-                        </p>
-                        {nft.metadata?.attributes && nft.metadata.attributes.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {nft.metadata.attributes.slice(0, 2).map((attr: any, index: number) => (
-                              <span 
-                                key={index} 
-                                className="text-xs bg-gray-100 px-1.5 py-0.5 rounded"
-                              >
-                                {attr.trait_type}: {attr.value}
-                              </span>
-                            ))}
+                <div className="space-y-3">
+                  <div className="text-xs text-gray-500">
+                    Found {nfts.length} NFTs in your wallet
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {nfts.map((nft) => (
+                      <div 
+                        key={nft.tokenId}
+                        onClick={() => setSelectedNft(nft)}
+                        className={`border rounded-lg p-2 cursor-pointer transition-all ${
+                          selectedNft?.tokenId === nft.tokenId 
+                            ? 'border-blue-500 bg-blue-50' 
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        {/* NFT 图像 */}
+                        {nft.metadata?.image ? (
+                          <div className="aspect-square w-full mb-2 overflow-hidden rounded-md">
+                            <img 
+                              src={nft.metadata.image.startsWith('ipfs://') 
+                                ? nft.metadata.image.replace('ipfs://', 'https://ipfs.io/ipfs/') 
+                                : nft.metadata.image
+                              } 
+                              alt={`NFT #${nft.tokenId}`}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = 'https://placehold.co/200x200?text=NFT';
+                              }}
+                            />
+                          </div>
+                        ) : (
+                          <div className="aspect-square w-full mb-2 bg-gray-100 flex items-center justify-center rounded-md">
+                            <span className="text-gray-500 text-xs">NFT #{nft.tokenId}</span>
                           </div>
                         )}
+                        
+                        {/* NFT 信息 */}
+                        <div className="space-y-1">
+                          <p className="font-medium text-xs truncate">
+                            {nft.metadata?.name || `NFT #${nft.tokenId}`}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            ID: {nft.tokenId}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               ) : currentNetwork === 'ethereum' ? (
                 <p className="text-sm text-gray-500">No NFTs found in your wallet</p>
@@ -506,7 +487,7 @@ export default function HeroSection({ user }: HeroSectionProps) {
             </div>
             
             {/* 右侧：英雄信息 */}
-            <div>
+            <div className="md:col-span-2">
               <h3 className="text-sm font-medium mb-3">Hero Information</h3>
               {isLoading && selectedNft ? (
                 <div className="flex items-center justify-center h-24">
