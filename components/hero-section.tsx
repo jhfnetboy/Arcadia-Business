@@ -60,6 +60,7 @@ export default function HeroSection({ user }: HeroSectionProps) {
   const [nfts, setNfts] = useState<NFT[]>([])
   const [selectedNft, setSelectedNft] = useState<NFT | null>(null)
   const [contractError, setContractError] = useState<string | null>(null)
+  const [heroNotFound, setHeroNotFound] = useState(false)
   const { ethereumAddress, aptosAddress, currentNetwork } = useBlockchainWallet()
 
   // 加载用户的 NFT
@@ -273,6 +274,8 @@ export default function HeroSection({ user }: HeroSectionProps) {
       
       setIsLoading(true);
       setContractError(null);
+      setHeroNotFound(false);
+      setHero(null);
       
       try {
         const provider = new ethers.providers.Web3Provider(window.ethereum as any);
@@ -298,62 +301,62 @@ export default function HeroSection({ user }: HeroSectionProps) {
         console.log('Getting hero info for NFT contract:', ETHEREUM_CONTRACTS.HERO_NFT_ADDRESS, 'and token ID:', selectedNft.tokenId);
         
         try {
-          // 创建一个新的英雄对象，不调用合约
-          const newHero: Hero = {
-            name: heroName || `Hero #${selectedNft.tokenId}`,
-            points: 0,
-            level: 1,
-            userId: user.email || 'unknown',
-            createdAt: new Date().toISOString(),
-            tokenId: selectedNft.tokenId
-          };
+          // 创建合约实例
+          const heroContract = new ethers.Contract(
+            ETHEREUM_CONTRACTS.HERO_ADDRESS,
+            HERO_ABI,
+            signer
+          );
           
-          setHero(newHero);
-          
-          // 尝试保存到 API，但不要在失败时抛出错误
+          // 尝试从合约获取英雄信息
           try {
-            await saveHero(newHero);
-          } catch (saveError) {
-            console.error('Error saving hero:', saveError);
-            // 不要显示 API 错误，因为这可能是正常的（API 可能尚未实现）
+            const heroInfo = await heroContract.getHeroInfo(
+              ETHEREUM_CONTRACTS.HERO_NFT_ADDRESS,
+              selectedNft.tokenId
+            );
+            
+            console.log('Hero info retrieved:', heroInfo);
+            
+            // 创建英雄对象
+            const newHero: Hero = {
+              name: heroInfo.name || `Hero #${selectedNft.tokenId}`,
+              points: heroInfo.dailyPoints ? parseInt(heroInfo.dailyPoints.toString()) : 0,
+              level: heroInfo.level ? parseInt(heroInfo.level.toString()) : 1,
+              userId: user.email || 'unknown',
+              createdAt: new Date().toISOString(),
+              tokenId: selectedNft.tokenId
+            };
+            
+            setHero(newHero);
+            setHeroNotFound(false);
+            
+          } catch (contractError) {
+            console.error('Error getting hero from contract:', contractError);
+            setContractError(`Hero not found in contract: ${contractError instanceof Error ? contractError.message : String(contractError)}`);
+            setHeroNotFound(true);
           }
         } catch (error) {
-          console.error('Error getting hero info:', error);
-          setContractError(`Error getting hero info: ${error instanceof Error ? error.message : String(error)}`);
-          
-          // 如果合约调用失败，创建新的英雄
-          const newHero: Hero = {
-            name: `Hero #${selectedNft.tokenId}`,
-            points: 0,
-            level: 1,
-            userId: user.email || 'unknown',
-            createdAt: new Date().toISOString(),
-            tokenId: selectedNft.tokenId
-          };
-          
-          setHero(newHero);
-          
-          try {
-            await saveHero(newHero);
-          } catch (saveError) {
-            console.error('Error saving hero:', saveError);
-            // 不要显示 API 错误
-          }
+          console.error('Error initializing hero contract:', error);
+          setContractError(`Error initializing hero contract: ${error instanceof Error ? error.message : String(error)}`);
+          setHeroNotFound(true);
         }
       } catch (error) {
         console.error('Error loading hero info:', error);
         setContractError(`Error loading hero info: ${error instanceof Error ? error.message : String(error)}`);
+        setHeroNotFound(true);
       } finally {
         setIsLoading(false);
       }
     };
     
     loadHeroInfo();
-  }, [selectedNft, ethereumAddress, user.email, heroName]);
+  }, [selectedNft, ethereumAddress, user.email]);
 
   // 保存英雄到 API
   const saveHero = async (hero: Hero) => {
     try {
+      setIsCreating(true);
+      
       const response = await fetch('/api/heroes', {
         method: 'POST',
         headers: {
@@ -366,10 +369,15 @@ export default function HeroSection({ user }: HeroSectionProps) {
         throw new Error(`API error: ${response.status}`);
       }
       
-      return await response.json();
+      const result = await response.json();
+      setHero(hero);
+      setHeroNotFound(false);
+      return result;
     } catch (error) {
       console.error('Error saving hero:', error);
       throw error;
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -386,11 +394,9 @@ export default function HeroSection({ user }: HeroSectionProps) {
       tokenId: selectedNft.tokenId
     };
     
-    setHero(newHero);
-    
-    // 尝试保存，但不要在失败时显示错误
     saveHero(newHero).catch(error => {
       console.error('Error saving hero:', error);
+      setContractError(`Error saving hero: ${error instanceof Error ? error.message : String(error)}`);
     });
   };
 
@@ -492,7 +498,9 @@ export default function HeroSection({ user }: HeroSectionProps) {
                 <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-800">
                   <p className="font-medium">Contract Error</p>
                   <p className="text-xs mt-1">{contractError}</p>
-                  <p className="text-xs mt-2">You can still create a hero manually.</p>
+                  {heroNotFound && (
+                    <p className="text-xs mt-2">No hero found for this NFT. You can create a new one.</p>
+                  )}
                 </div>
               )}
               
@@ -510,7 +518,7 @@ export default function HeroSection({ user }: HeroSectionProps) {
                     )}
                   </div>
                 </div>
-              ) : selectedNft ? (
+              ) : selectedNft && heroNotFound ? (
                 <div className="space-y-2">
                   <Input
                     type="text"
@@ -524,11 +532,13 @@ export default function HeroSection({ user }: HeroSectionProps) {
                     disabled={isCreating}
                     className="w-full"
                   >
-                    Create Hero with Selected NFT
+                    {isCreating ? 'Creating Hero...' : 'Create Hero with Selected NFT'}
                   </Button>
                 </div>
+              ) : selectedNft ? (
+                <p className="text-sm text-gray-500">Checking hero information...</p>
               ) : (
-                <p className="text-sm text-gray-500">Select an NFT to create or view a hero</p>
+                <p className="text-sm text-gray-500">Select an NFT to view or create a hero</p>
               )}
             </div>
           )}
