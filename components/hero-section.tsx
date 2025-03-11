@@ -61,7 +61,14 @@ export default function HeroSection({ user }: HeroSectionProps) {
   const [selectedNft, setSelectedNft] = useState<NFT | null>(null)
   const [contractError, setContractError] = useState<string | null>(null)
   const [heroNotFound, setHeroNotFound] = useState(false)
+  const [debugInfo, setDebugInfo] = useState<string[]>([])
   const { ethereumAddress, aptosAddress, currentNetwork } = useBlockchainWallet()
+
+  // 添加调试信息
+  const addDebugInfo = (info: string) => {
+    console.log(info);
+    setDebugInfo(prev => [...prev, `${new Date().toLocaleTimeString()}: ${info}`]);
+  };
 
   // 加载用户的 NFT
   useEffect(() => {
@@ -278,13 +285,13 @@ export default function HeroSection({ user }: HeroSectionProps) {
       setHero(null);
       
       try {
-        const provider = new ethers.providers.Web3Provider(window.ethereum as any);
-        const signer = provider.getSigner();
+        addDebugInfo(`Getting hero info for NFT contract: ${ETHEREUM_CONTRACTS.HERO_NFT_ADDRESS} and token ID: ${selectedNft.tokenId}`);
         
-        // 创建英雄合约实例
+        // 检查合约地址是否有效
         if (!ETHEREUM_CONTRACTS.HERO_ADDRESS) {
-          console.error('Invalid hero contract address');
-          setContractError('Invalid hero contract address');
+          const error = 'Invalid hero contract address';
+          console.error(error);
+          setContractError(error);
           setIsLoading(false);
           return;
         }
@@ -298,7 +305,11 @@ export default function HeroSection({ user }: HeroSectionProps) {
           return;
         }
         
-        console.log('Getting hero info for NFT contract:', ETHEREUM_CONTRACTS.HERO_NFT_ADDRESS, 'and token ID:', selectedNft.tokenId);
+        // 初始化 provider 和 signer
+        const provider = new ethers.providers.Web3Provider(window.ethereum as any);
+        const signer = provider.getSigner();
+        
+        addDebugInfo('Initializing hero contract...');
         
         try {
           // 创建合约实例
@@ -308,14 +319,18 @@ export default function HeroSection({ user }: HeroSectionProps) {
             signer
           );
           
+          addDebugInfo('Hero contract initialized');
+          
           // 尝试从合约获取英雄信息
           try {
+            addDebugInfo(`Calling getHeroInfo with params: ${ETHEREUM_CONTRACTS.HERO_NFT_ADDRESS}, ${selectedNft.tokenId}`);
+            
             const heroInfo = await heroContract.getHeroInfo(
               ETHEREUM_CONTRACTS.HERO_NFT_ADDRESS,
               selectedNft.tokenId
             );
             
-            console.log('Hero info retrieved:', heroInfo);
+            addDebugInfo(`Hero info retrieved: ${JSON.stringify(heroInfo)}`);
             
             // 创建英雄对象
             const newHero: Hero = {
@@ -332,16 +347,19 @@ export default function HeroSection({ user }: HeroSectionProps) {
             
           } catch (contractError) {
             console.error('Error getting hero from contract:', contractError);
+            addDebugInfo(`Error getting hero from contract: ${contractError instanceof Error ? contractError.message : String(contractError)}`);
             setContractError(`Hero not found in contract: ${contractError instanceof Error ? contractError.message : String(contractError)}`);
             setHeroNotFound(true);
           }
         } catch (error) {
           console.error('Error initializing hero contract:', error);
+          addDebugInfo(`Error initializing hero contract: ${error instanceof Error ? error.message : String(error)}`);
           setContractError(`Error initializing hero contract: ${error instanceof Error ? error.message : String(error)}`);
           setHeroNotFound(true);
         }
       } catch (error) {
         console.error('Error loading hero info:', error);
+        addDebugInfo(`Error loading hero info: ${error instanceof Error ? error.message : String(error)}`);
         setContractError(`Error loading hero info: ${error instanceof Error ? error.message : String(error)}`);
         setHeroNotFound(true);
       } finally {
@@ -356,6 +374,7 @@ export default function HeroSection({ user }: HeroSectionProps) {
   const saveHero = async (hero: Hero) => {
     try {
       setIsCreating(true);
+      addDebugInfo(`Saving hero: ${JSON.stringify(hero)}`);
       
       const response = await fetch('/api/heroes', {
         method: 'POST',
@@ -366,15 +385,19 @@ export default function HeroSection({ user }: HeroSectionProps) {
       });
       
       if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
+        const error = `API error: ${response.status}`;
+        addDebugInfo(error);
+        throw new Error(error);
       }
       
       const result = await response.json();
+      addDebugInfo(`Hero saved successfully: ${JSON.stringify(result)}`);
       setHero(hero);
       setHeroNotFound(false);
       return result;
     } catch (error) {
       console.error('Error saving hero:', error);
+      addDebugInfo(`Error saving hero: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     } finally {
       setIsCreating(false);
@@ -394,6 +417,7 @@ export default function HeroSection({ user }: HeroSectionProps) {
       tokenId: selectedNft.tokenId
     };
     
+    addDebugInfo(`Creating hero: ${JSON.stringify(newHero)}`);
     saveHero(newHero).catch(error => {
       console.error('Error saving hero:', error);
       setContractError(`Error saving hero: ${error instanceof Error ? error.message : String(error)}`);
@@ -401,85 +425,7 @@ export default function HeroSection({ user }: HeroSectionProps) {
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {/* 左列：NFT 列表 */}
-      <Card className="h-full">
-        <CardHeader>
-          <CardTitle>Your NFTs</CardTitle>
-          <CardDescription>Select an NFT to create or view a hero</CardDescription>
-        </CardHeader>
-        
-        <CardContent>
-          {isLoading && !nfts.length ? (
-            <div className="flex items-center justify-center h-24">
-              <p>Loading NFTs...</p>
-            </div>
-          ) : nfts.length > 0 ? (
-            <div className="grid grid-cols-2 gap-4">
-              {nfts.map((nft) => (
-                <div 
-                  key={nft.tokenId}
-                  onClick={() => setSelectedNft(nft)}
-                  className={`border rounded-lg p-3 cursor-pointer transition-all ${
-                    selectedNft?.tokenId === nft.tokenId 
-                      ? 'border-blue-500 bg-blue-50' 
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  {/* NFT 图像 */}
-                  {nft.metadata?.image ? (
-                    <div className="aspect-square w-full mb-2 overflow-hidden rounded-md">
-                      <img 
-                        src={nft.metadata.image.startsWith('ipfs://') 
-                          ? nft.metadata.image.replace('ipfs://', 'https://ipfs.io/ipfs/') 
-                          : nft.metadata.image
-                        } 
-                        alt={`NFT #${nft.tokenId}`}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = 'https://placehold.co/200x200?text=NFT';
-                        }}
-                      />
-                    </div>
-                  ) : (
-                    <div className="aspect-square w-full mb-2 bg-gray-100 flex items-center justify-center rounded-md">
-                      <span className="text-gray-500">NFT #{nft.tokenId}</span>
-                    </div>
-                  )}
-                  
-                  {/* NFT 信息 */}
-                  <div className="space-y-1">
-                    <p className="font-medium text-sm truncate">
-                      {nft.metadata?.name || `NFT #${nft.tokenId}`}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Token ID: {nft.tokenId}
-                    </p>
-                    {nft.metadata?.attributes && nft.metadata.attributes.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {nft.metadata.attributes.slice(0, 2).map((attr: any, index: number) => (
-                          <span 
-                            key={index} 
-                            className="text-xs bg-gray-100 px-1.5 py-0.5 rounded"
-                          >
-                            {attr.trait_type}: {attr.value}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : currentNetwork === 'ethereum' ? (
-            <p className="text-sm text-gray-500">No NFTs found in your wallet</p>
-          ) : (
-            <p className="text-sm text-gray-500">Connect your Ethereum wallet to view NFTs</p>
-          )}
-        </CardContent>
-      </Card>
-      
-      {/* 右列：英雄信息 */}
+    <div className="space-y-6">
       <Card className="h-full">
         <CardHeader>
           <CardTitle>Your Heroes</CardTitle>
@@ -487,61 +433,147 @@ export default function HeroSection({ user }: HeroSectionProps) {
         </CardHeader>
         
         <CardContent>
-          {isLoading && selectedNft ? (
-            <div className="flex items-center justify-center h-24">
-              <p>Loading hero information...</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* 左侧：NFT 列表 */}
+            <div>
+              <h3 className="text-sm font-medium mb-3">Your NFTs</h3>
+              {isLoading && !nfts.length ? (
+                <div className="flex items-center justify-center h-24">
+                  <p>Loading NFTs...</p>
+                </div>
+              ) : nfts.length > 0 ? (
+                <div className="grid grid-cols-2 gap-4">
+                  {nfts.map((nft) => (
+                    <div 
+                      key={nft.tokenId}
+                      onClick={() => setSelectedNft(nft)}
+                      className={`border rounded-lg p-3 cursor-pointer transition-all ${
+                        selectedNft?.tokenId === nft.tokenId 
+                          ? 'border-blue-500 bg-blue-50' 
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      {/* NFT 图像 */}
+                      {nft.metadata?.image ? (
+                        <div className="aspect-square w-full mb-2 overflow-hidden rounded-md">
+                          <img 
+                            src={nft.metadata.image.startsWith('ipfs://') 
+                              ? nft.metadata.image.replace('ipfs://', 'https://ipfs.io/ipfs/') 
+                              : nft.metadata.image
+                            } 
+                            alt={`NFT #${nft.tokenId}`}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = 'https://placehold.co/200x200?text=NFT';
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        <div className="aspect-square w-full mb-2 bg-gray-100 flex items-center justify-center rounded-md">
+                          <span className="text-gray-500">NFT #{nft.tokenId}</span>
+                        </div>
+                      )}
+                      
+                      {/* NFT 信息 */}
+                      <div className="space-y-1">
+                        <p className="font-medium text-sm truncate">
+                          {nft.metadata?.name || `NFT #${nft.tokenId}`}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Token ID: {nft.tokenId}
+                        </p>
+                        {nft.metadata?.attributes && nft.metadata.attributes.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {nft.metadata.attributes.slice(0, 2).map((attr: any, index: number) => (
+                              <span 
+                                key={index} 
+                                className="text-xs bg-gray-100 px-1.5 py-0.5 rounded"
+                              >
+                                {attr.trait_type}: {attr.value}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : currentNetwork === 'ethereum' ? (
+                <p className="text-sm text-gray-500">No NFTs found in your wallet</p>
+              ) : (
+                <p className="text-sm text-gray-500">Connect your Ethereum wallet to view NFTs</p>
+              )}
             </div>
-          ) : (
-            <div className="space-y-4">
-              {/* 合约错误信息 */}
-              {contractError && (
-                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-800">
-                  <p className="font-medium">Contract Error</p>
-                  <p className="text-xs mt-1">{contractError}</p>
-                  {heroNotFound && (
-                    <p className="text-xs mt-2">No hero found for this NFT. You can create a new one.</p>
+            
+            {/* 右侧：英雄信息 */}
+            <div>
+              <h3 className="text-sm font-medium mb-3">Hero Information</h3>
+              {isLoading && selectedNft ? (
+                <div className="flex items-center justify-center h-24">
+                  <p>Loading hero information...</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* 合约错误信息 */}
+                  {contractError && (
+                    <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-800">
+                      <p className="font-medium">Contract Error</p>
+                      <p className="text-xs mt-1">{contractError}</p>
+                      {heroNotFound && (
+                        <p className="text-xs mt-2">No hero found for this NFT. You can create a new one.</p>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* 调试信息 */}
+                  {debugInfo.length > 0 && (
+                    <div className="p-3 bg-gray-50 border border-gray-200 rounded-md text-xs text-gray-700 max-h-40 overflow-y-auto">
+                      <p className="font-medium mb-1">Debug Info:</p>
+                      {debugInfo.map((info, index) => (
+                        <p key={index} className="mb-1">{info}</p>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* 英雄信息 */}
+                  {hero ? (
+                    <div className="space-y-2">
+                      <div className="p-4 bg-gray-50 rounded-lg">
+                        <p><strong>Name:</strong> {hero.name}</p>
+                        <p><strong>Level:</strong> {hero.level} | <strong>Points:</strong> {hero.points}</p>
+                        {hero.tokenId && (
+                          <p className="text-xs text-green-600">
+                            <strong>Token ID:</strong> {hero.tokenId}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ) : selectedNft && heroNotFound ? (
+                    <div className="space-y-2">
+                      <Input
+                        type="text"
+                        placeholder="Enter hero name"
+                        value={heroName}
+                        onChange={(e) => setHeroName(e.target.value)}
+                        className="w-full"
+                      />
+                      <Button
+                        onClick={createHero}
+                        disabled={isCreating}
+                        className="w-full"
+                      >
+                        {isCreating ? 'Creating Hero...' : 'Create Hero with Selected NFT'}
+                      </Button>
+                    </div>
+                  ) : selectedNft ? (
+                    <p className="text-sm text-gray-500">Checking hero information...</p>
+                  ) : (
+                    <p className="text-sm text-gray-500">Select an NFT to view or create a hero</p>
                   )}
                 </div>
               )}
-              
-              {/* 英雄信息 */}
-              {hero ? (
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium">Hero Information</h3>
-                  <div className="p-4 bg-gray-50 rounded-lg">
-                    <p><strong>Name:</strong> {hero.name}</p>
-                    <p><strong>Level:</strong> {hero.level} | <strong>Points:</strong> {hero.points}</p>
-                    {hero.tokenId && (
-                      <p className="text-xs text-green-600">
-                        <strong>Token ID:</strong> {hero.tokenId}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ) : selectedNft && heroNotFound ? (
-                <div className="space-y-2">
-                  <Input
-                    type="text"
-                    placeholder="Enter hero name"
-                    value={heroName}
-                    onChange={(e) => setHeroName(e.target.value)}
-                    className="w-full"
-                  />
-                  <Button
-                    onClick={createHero}
-                    disabled={isCreating}
-                    className="w-full"
-                  >
-                    {isCreating ? 'Creating Hero...' : 'Create Hero with Selected NFT'}
-                  </Button>
-                </div>
-              ) : selectedNft ? (
-                <p className="text-sm text-gray-500">Checking hero information...</p>
-              ) : (
-                <p className="text-sm text-gray-500">Select an NFT to view or create a hero</p>
-              )}
             </div>
-          )}
+          </div>
         </CardContent>
         
         <CardFooter>
