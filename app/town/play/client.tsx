@@ -35,6 +35,7 @@ export default function PlayGameClient({ user }: PlayGameClientProps) {
   const [hero, setHero] = useState<Hero | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [txHash, setTxHash] = useState<string | null>(null)
+  const [gameLoaded, setGameLoaded] = useState(false)
 
   // 创建英雄
   const createHero = () => {
@@ -62,7 +63,7 @@ export default function PlayGameClient({ user }: PlayGameClientProps) {
 
   // 当英雄数据变化时，通过 postMessage 发送到游戏
   useEffect(() => {
-    if (hero) {
+    if (hero && gameLoaded) {
       const iframe = document.getElementById('game-iframe') as HTMLIFrameElement
       
       // 确保 iframe 已加载
@@ -91,7 +92,7 @@ export default function PlayGameClient({ user }: PlayGameClientProps) {
         iframe?.removeEventListener('load', sendDataToGame)
       }
     }
-  }, [hero])
+  }, [hero, gameLoaded])
 
   // 监听来自游戏的消息
   useEffect(() => {
@@ -152,6 +153,24 @@ export default function PlayGameClient({ user }: PlayGameClientProps) {
     }
   }
 
+  // 处理 iframe 加载完成
+  const handleIframeLoad = () => {
+    console.log('Game iframe loaded')
+    setGameLoaded(true)
+    
+    // 如果已经有英雄数据，发送到游戏
+    if (hero) {
+      const iframe = document.getElementById('game-iframe') as HTMLIFrameElement
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage({
+          type: 'HERO_DATA',
+          payload: hero
+        }, '*')
+        console.log('Hero data sent to game after load:', hero)
+      }
+    }
+  }
+
   return (
     <>
       {!hero ? (
@@ -191,19 +210,21 @@ export default function PlayGameClient({ user }: PlayGameClientProps) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="md:col-span-2">
             <div className="bg-white rounded-lg shadow-md p-6">
-              <div className="aspect-video w-full mb-4">
+              <div className="aspect-video w-full mb-4 relative">
                 <iframe
                   id="game-iframe"
-                  src="/game/index.html"
+                  src="/game/game-bridge.html"
                   className="w-full h-full border-0 rounded"
                   title="Arcadia Game"
                   allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
+                  onLoad={handleIframeLoad}
                 ></iframe>
               </div>
               <div className="bg-gray-100 p-4 rounded">
                 <h3 className="font-semibold mb-2">Game Instructions</h3>
-                <p>Play the game and earn points. Click "Save Game" in the game to update your hero data.</p>
+                <p>Play the game and earn points. Use the "Save Game" button in the top-right corner to save your progress.</p>
+                <p className="text-sm text-gray-500 mt-2">Note: This game uses the Godot engine and may take a moment to load.</p>
               </div>
             </div>
           </div>

@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arcadia Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #1a1a2e;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        .game-container {
+            width: 800px;
+            max-width: 100%;
+            background-color: #16213e;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #0f3460;
+        }
+        .hero-info {
+            display: flex;
+            flex-direction: column;
+        }
+        .game-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 400px;
+            background-color: #0f3460;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        .game-character {
+            width: 50px;
+            height: 50px;
+            background-color: #e94560;
+            border-radius: 50%;
+            position: absolute;
+            transition: all 0.3s ease;
+        }
+        .game-controls {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+        }
+        button {
+            background-color: #e94560;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #c73e55;
+        }
+        .points-notification {
+            position: absolute;
+            top: 20px;
+            background-color: rgba(233, 69, 96, 0.8);
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+        .show-notification {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <div class="hero-info">
+                <h2 id="heroName">Hero Name</h2>
+                <div>Points: <span id="heroPoints">0</span></div>
+                <div>Level: <span id="heroLevel">1</span></div>
+            </div>
+            <div>
+                <button id="saveButton">Save Game</button>
+            </div>
+        </div>
+        
+        <div class="game-content">
+            <div class="game-character" id="character"></div>
+            <div class="points-notification" id="notification">+10 PNTs!</div>
+        </div>
+        
+        <div class="game-controls">
+            <button id="earnPointsButton">Earn Points</button>
+            <button id="levelUpButton">Level Up</button>
+        </div>
+    </div>
+
+    <script>
+        // 游戏状态
+        let heroData = {
+            name: "Default Hero",
+            points: 0,
+            level: 1,
+            userId: "unknown",
+            createdAt: new Date().toISOString()
+        };
+        
+        // DOM 元素
+        const heroNameElement = document.getElementById('heroName');
+        const heroPointsElement = document.getElementById('heroPoints');
+        const heroLevelElement = document.getElementById('heroLevel');
+        const saveButton = document.getElementById('saveButton');
+        const earnPointsButton = document.getElementById('earnPointsButton');
+        const levelUpButton = document.getElementById('levelUpButton');
+        const character = document.getElementById('character');
+        const notification = document.getElementById('notification');
+        
+        // 随机位置
+        function moveCharacterToRandomPosition() {
+            const gameContent = document.querySelector('.game-content');
+            const maxX = gameContent.clientWidth - 50;
+            const maxY = gameContent.clientHeight - 50;
+            
+            const randomX = Math.floor(Math.random() * maxX);
+            const randomY = Math.floor(Math.random() * maxY);
+            
+            character.style.left = `${randomX}px`;
+            character.style.top = `${randomY}px`;
+        }
+        
+        // 初始化角色位置
+        moveCharacterToRandomPosition();
+        
+        // 显示通知
+        function showNotification(text) {
+            notification.textContent = text;
+            notification.classList.add('show-notification');
+            
+            setTimeout(() => {
+                notification.classList.remove('show-notification');
+            }, 2000);
+        }
+        
+        // 更新 UI
+        function updateUI() {
+            heroNameElement.textContent = heroData.name;
+            heroPointsElement.textContent = heroData.points;
+            heroLevelElement.textContent = heroData.level;
+        }
+        
+        // 赚取点数
+        earnPointsButton.addEventListener('click', () => {
+            const pointsEarned = 10;
+            heroData.points += pointsEarned;
+            updateUI();
+            moveCharacterToRandomPosition();
+            showNotification(`+${pointsEarned} PNTs!`);
+        });
+        
+        // 升级
+        levelUpButton.addEventListener('click', () => {
+            if (heroData.points >= 50) {
+                heroData.level += 1;
+                heroData.points -= 50;
+                updateUI();
+                showNotification('Level Up!');
+            } else {
+                showNotification('Need 50 PNTs to level up!');
+            }
+        });
+        
+        // 保存游戏
+        saveButton.addEventListener('click', () => {
+            // 发送数据到父窗口
+            window.parent.postMessage({
+                type: 'SAVE_HERO',
+                payload: heroData
+            }, '*');
+            
+            showNotification('Game Saved!');
+        });
+        
+        // 监听来自父窗口的消息
+        window.addEventListener('message', (event) => {
+            // 验证消息类型
+            if (event.data && event.data.type === 'HERO_DATA') {
+                // 更新英雄数据
+                heroData = event.data.payload;
+                console.log('Received hero data:', heroData);
+                
+                // 更新 UI
+                updateUI();
+                
+                // 显示通知
+                showNotification('Hero data loaded!');
+            }
+        });
+    </script>
+</body>
+</html> 
