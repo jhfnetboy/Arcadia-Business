@@ -33,32 +33,77 @@ export default function PlayGameClient({ user }: PlayGameClientProps) {
   const router = useRouter()
   const [heroName, setHeroName] = useState('')
   const [hero, setHero] = useState<Hero | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isCreating, setIsCreating] = useState(false)
   const [txHash, setTxHash] = useState<string | null>(null)
   const [gameLoaded, setGameLoaded] = useState(false)
 
+  // 加载英雄数据
+  useEffect(() => {
+    const fetchHero = async () => {
+      try {
+        const response = await fetch('/api/hero/get')
+        const data = await response.json()
+        
+        if (data.success && data.hero) {
+          setHero(data.hero)
+          if (data.hero.txHash) {
+            setTxHash(data.hero.txHash)
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching hero:', error)
+        toast.error('Failed to load hero data')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchHero()
+  }, [])
+
   // 创建英雄
-  const createHero = () => {
+  const createHero = async () => {
     if (!heroName.trim()) {
       toast.error('Please enter a hero name')
       return
     }
 
-    setIsLoading(true)
+    setIsCreating(true)
     
-    // 创建英雄数据
-    const newHero: Hero = {
-      name: heroName,
-      points: 0,
-      level: 1,
-      userId: user.email || 'unknown',
-      createdAt: new Date().toISOString()
+    try {
+      // 创建英雄数据
+      const newHero: Hero = {
+        name: heroName,
+        points: 0,
+        level: 1,
+        userId: user.email || 'unknown',
+        createdAt: new Date().toISOString()
+      }
+      
+      // 保存到服务器
+      const response = await fetch('/api/hero/save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newHero),
+      })
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        setHero(result.hero)
+        toast.success(`Hero ${heroName} created!`)
+      } else {
+        toast.error('Failed to create hero')
+      }
+    } catch (error) {
+      console.error('Error creating hero:', error)
+      toast.error('Error creating hero')
+    } finally {
+      setIsCreating(false)
     }
-    
-    // 设置英雄数据
-    setHero(newHero)
-    setIsLoading(false)
-    toast.success(`Hero ${heroName} created!`)
   }
 
   // 当英雄数据变化时，通过 postMessage 发送到游戏
@@ -133,7 +178,7 @@ export default function PlayGameClient({ user }: PlayGameClientProps) {
             if (result.success) {
               toast.success('Hero data saved successfully!')
               // 更新本地英雄数据
-              setHero(data.payload as Hero)
+              setHero(result.hero)
             } else {
               toast.error('Failed to save hero data')
             }
@@ -167,9 +212,22 @@ export default function PlayGameClient({ user }: PlayGameClientProps) {
     
     // 更新英雄数据，添加交易哈希
     if (hero) {
-      setHero({
+      const updatedHero = {
         ...hero,
         txHash: hash
+      }
+      
+      setHero(updatedHero)
+      
+      // 保存到服务器
+      fetch('/api/hero/save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedHero),
+      }).catch(error => {
+        console.error('Error saving txHash:', error)
       })
     }
   }
@@ -201,7 +259,11 @@ export default function PlayGameClient({ user }: PlayGameClientProps) {
 
   return (
     <>
-      {!hero ? (
+      {isLoading ? (
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6 flex justify-center items-center h-32">
+          <p>Loading hero data...</p>
+        </div>
+      ) : !hero ? (
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <h2 className="text-xl font-semibold mb-4">Create Your Hero</h2>
           <div className="flex gap-4 mb-4">
@@ -214,9 +276,9 @@ export default function PlayGameClient({ user }: PlayGameClientProps) {
             />
             <Button 
               onClick={createHero} 
-              disabled={isLoading || !heroName.trim()}
+              disabled={isCreating || !heroName.trim()}
             >
-              {isLoading ? 'Creating...' : 'Create Hero'}
+              {isCreating ? 'Creating...' : 'Create Hero'}
             </Button>
           </div>
         </div>

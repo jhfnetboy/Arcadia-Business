@@ -2,9 +2,9 @@ import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { UserAvatar } from "@/components/auth-components"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import WalletSection from "@/components/wallet-section"
+import HeroSection from "@/components/hero-section"
 
 export default async function TownPage() {
   const session = await auth()
@@ -29,30 +29,25 @@ export default async function TownPage() {
 
   // If signed in, show the town page with sections
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center">
-          <div className="mr-4">
-            <UserAvatar user={session.user} />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold">Welcome to Town</h1>
-            <p>Hello, {session.user.name || session.user.email}</p>
-          </div>
+    <div className="container mx-auto py-4">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h1 className="text-3xl font-bold">Welcome to Town</h1>
+          <p>Hello, {session.user.name || session.user.email}</p>
         </div>
         
         {/* Wallet Connection Section */}
         <WalletSection />
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
         {/* Your NFTs Section */}
-        <Card>
+        <Card className="h-64">
           <CardHeader>
             <CardTitle>Your NFTs</CardTitle>
             <CardDescription>View and manage your NFT collection</CardDescription>
           </CardHeader>
-          <CardContent className="h-40 flex items-center justify-center">
+          <CardContent className="h-24 flex items-center justify-center">
             <p className="text-muted-foreground">No NFTs found</p>
           </CardContent>
           <CardFooter>
@@ -63,28 +58,15 @@ export default async function TownPage() {
         </Card>
         
         {/* Your Heroes Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Your Heroes</CardTitle>
-            <CardDescription>Manage your game heroes</CardDescription>
-          </CardHeader>
-          <CardContent className="h-40 flex items-center justify-center">
-            <p className="text-muted-foreground">No heroes found</p>
-          </CardContent>
-          <CardFooter>
-            <Link href="/town/play">
-              <Button className="w-full bg-green-600 hover:bg-green-700">Play Game</Button>
-            </Link>
-          </CardFooter>
-        </Card>
+        <HeroSection user={session.user} />
         
         {/* Your Assets Section */}
-        <Card>
+        <Card className="h-64">
           <CardHeader>
             <CardTitle>Your Assets</CardTitle>
             <CardDescription>View your tokens and other assets</CardDescription>
           </CardHeader>
-          <CardContent className="h-40 flex items-center justify-center">
+          <CardContent className="h-24 flex items-center justify-center">
             <p className="text-muted-foreground">No assets found</p>
           </CardContent>
           <CardFooter>
@@ -95,12 +77,12 @@ export default async function TownPage() {
         </Card>
         
         {/* Buy in Shop Section */}
-        <Card>
+        <Card className="h-64">
           <CardHeader>
             <CardTitle>Buy in Shop</CardTitle>
             <CardDescription>Purchase new items and upgrades</CardDescription>
           </CardHeader>
-          <CardContent className="h-40 flex items-center justify-center">
+          <CardContent className="h-24 flex items-center justify-center">
             <p className="text-muted-foreground">Shop coming soon</p>
           </CardContent>
           <CardFooter>

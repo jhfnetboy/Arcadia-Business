@@ -1,90 +1,77 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse, NextRequest } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
   try {
-    // 验证用户是否已登录
+    // 获取当前用户会话
     const session = await auth()
-    if (!session?.user?.email) {
+    
+    if (!session || !session.user?.email) {
       return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
+        { success: false, error: 'Unauthorized' },
         { status: 401 }
       )
     }
-
-    // 获取请求数据
+    
+    // 解析请求体
     const heroData = await request.json()
-
-    // 验证数据
-    if (!heroData || !heroData.name) {
+    
+    // 验证必要字段
+    if (!heroData.name) {
       return NextResponse.json(
-        { success: false, message: 'Invalid hero data' },
+        { success: false, error: 'Hero name is required' },
         { status: 400 }
       )
     }
-
-    // 获取用户
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    })
-
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: 'User not found' },
-        { status: 404 }
-      )
-    }
-
-    // 查找现有的英雄数据
+    
+    // 检查是否已存在同名英雄
     const existingHero = await prisma.heroData.findFirst({
       where: {
-        userId: user.id,
-        name: heroData.name,
-      },
+        userId: session.user.email,
+        name: heroData.name
+      }
     })
-
-    let hero
-
+    
+    let hero;
+    
     if (existingHero) {
       // 更新现有英雄数据
       hero = await prisma.heroData.update({
-        where: { id: existingHero.id },
+        where: {
+          id: existingHero.id
+        },
         data: {
           points: heroData.points || existingHero.points,
           level: heroData.level || existingHero.level,
-          metadata: {
-            ...(existingHero.metadata as any || {}),
-            lastUpdated: new Date().toISOString(),
-          },
-        },
+          metadata: heroData.metadata || existingHero.metadata,
+          updatedAt: new Date()
+        }
       })
     } else {
-      // 创建新的英雄数据
+      // 创建新英雄
       hero = await prisma.heroData.create({
         data: {
-          userId: user.id,
+          userId: session.user.email,
           name: heroData.name,
           points: heroData.points || 0,
           level: heroData.level || 1,
-          metadata: {
-            createdAt: new Date().toISOString(),
-            lastUpdated: new Date().toISOString(),
-          },
-        },
+          metadata: heroData.metadata || {},
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
       })
     }
-
-    // 返回成功响应
-    return NextResponse.json({
-      success: true,
-      message: 'Hero data saved successfully',
-      hero,
-    })
+    
+    return NextResponse.json(
+      { success: true, hero },
+      { status: 200 }
+    )
+    
   } catch (error) {
     console.error('Error saving hero data:', error)
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { success: false, error: 'Failed to save hero data' },
       { status: 500 }
     )
   }
