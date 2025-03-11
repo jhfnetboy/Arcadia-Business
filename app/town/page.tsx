@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import WalletSection from "@/components/wallet-section"
 import HeroSection from "../../components/hero-section"
 import NFTSection from "../../components/nft-section"
+
 export default async function TownPage() {
   const session = await auth()
   
@@ -41,9 +42,11 @@ export default async function TownPage() {
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-        {/* Your NFTs Section */}
         {/* NFT Section - Using the new NFTSection component */}
         <NFTSection />
+        
+        {/* Your Heroes Section */}
+        <HeroSection user={session.user} />
         
         {/* Your Assets Section */}
         <Card className="h-64">
