@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
 import BlockchainConnector from '@/components/blockchain-connector'
+import { Maximize2, Minimize2 } from 'lucide-react'
 
 // 定义英雄数据类型
 interface Hero {
@@ -37,6 +38,8 @@ export default function PlayGameClient({ user }: PlayGameClientProps) {
   const [isCreating, setIsCreating] = useState(false)
   const [txHash, setTxHash] = useState<string | null>(null)
   const [gameLoaded, setGameLoaded] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const gameContainerRef = useRef<HTMLDivElement>(null)
 
   // 初始化默认英雄数据
   useEffect(() => {
@@ -203,6 +206,50 @@ export default function PlayGameClient({ user }: PlayGameClientProps) {
     }, 500) // 延迟500毫秒
   }
 
+  // 切换全屏模式
+  const toggleFullscreen = () => {
+    if (!gameContainerRef.current) return;
+    
+    if (!isFullscreen) {
+      // 进入全屏模式
+      if (gameContainerRef.current.requestFullscreen) {
+        gameContainerRef.current.requestFullscreen();
+      } else if ((gameContainerRef.current as any).webkitRequestFullscreen) {
+        (gameContainerRef.current as any).webkitRequestFullscreen();
+      } else if ((gameContainerRef.current as any).msRequestFullscreen) {
+        (gameContainerRef.current as any).msRequestFullscreen();
+      }
+      setIsFullscreen(true);
+    } else {
+      // 退出全屏模式
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if ((document as any).webkitExitFullscreen) {
+        (document as any).webkitExitFullscreen();
+      } else if ((document as any).msExitFullscreen) {
+        (document as any).msExitFullscreen();
+      }
+      setIsFullscreen(false);
+    }
+  };
+
+  // 监听全屏状态变化
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('msfullscreenchange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('msfullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
   return (
     <>
       {isLoading ? (
@@ -266,8 +313,19 @@ export default function PlayGameClient({ user }: PlayGameClientProps) {
       
       {hero && (
         <div className="w-full">
-          <div className="bg-white rounded-lg shadow-md p-4">
-            <div className="aspect-video w-full relative h-[calc(100vh-300px)]">
+          <div className="bg-white rounded-lg shadow-md p-4 relative" ref={gameContainerRef}>
+            <div className="absolute top-6 right-6 z-10">
+              <Button
+                variant="outline"
+                size="icon"
+                className="bg-white/80 hover:bg-white"
+                onClick={toggleFullscreen}
+                title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+              >
+                {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+              </Button>
+            </div>
+            <div className="aspect-video w-full relative h-[calc(100vh-250px)]">
               <iframe
                 id="game-iframe"
                 src="/game/game-bridge.html"
