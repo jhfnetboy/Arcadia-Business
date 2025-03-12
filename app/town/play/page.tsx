@@ -23,11 +23,11 @@ export default async function PlayGamePage() {
         
         <div className="flex items-center space-x-4">
           <Link href="/town">
-            <Button variant="outline">Back to Town</Button>
+            <Button variant="outline">Town</Button>
           </Link>
-          
-          {/* Global Wallet Connection */}
-          <GlobalWalletConnect />
+          <Link href="/player/browse">
+            <Button variant="outline">Buy Coupon</Button>
+          </Link>
         </div>
       </div>
       
