@@ -19,7 +19,6 @@ export default async function PlayGamePage() {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-3xl font-bold">Arcadia Game Center</h1>
-          <p>Hello, {session.user.name || session.user.email}</p>
         </div>
         
         <div className="flex items-center space-x-4">

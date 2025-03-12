@@ -335,20 +335,12 @@ export default function PlayGameClient({ user }: PlayGameClientProps) {
             )}
           </div>
           
-          {/* 区块链连接 */}
-          <div className="flex-1 h-32 bg-white rounded-lg shadow-md p-4">
-            <BlockchainWallet />
-          </div>
-          
           {/* 游戏统计 */}
           <div className="bg-white rounded-lg shadow-md p-4 flex-1 h-32">
             <h3 className="text-lg font-semibold mb-1">Game Stats</h3>
             <p className="text-sm mb-1">Points: {hero.points}</p>
             <p className="text-sm mb-1">Level: {hero.level}</p>
             <p className="text-sm mb-1">Created: {new Date(hero.createdAt).toLocaleString()}</p>
-            <p className="text-xs text-gray-500 mt-1">
-              Save progress to earn rewards!
-            </p>
           </div>
         </div>
       )}
