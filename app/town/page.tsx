@@ -42,6 +42,9 @@ export default async function TownPage() {
           <Link href="/town/aptos">
             <Button variant="outline">Switch to Aptos</Button>
           </Link>
+          <Link href="/town/play">
+            <Button variant="outline">Direct Play</Button>
+          </Link>          
           
           {/* Global Wallet Connection */}
           <GlobalWalletConnect />
